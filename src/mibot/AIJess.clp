@@ -1,4 +1,4 @@
-(printout t "Hola Mundo" crlf)
+(printout t "Hola Mundo GAy" crlf)
 
 (defglobal 
     ?*VARGLOB* = 123
@@ -17,6 +17,3 @@
     (bind ?*VARGLOB* 456)
 )
 
-(defrule decideGoal
-    (
-)

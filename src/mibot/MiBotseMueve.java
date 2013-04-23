@@ -138,32 +138,7 @@ public final class MiBotseMueve extends ObserverBot
 	{		
 		//Autorefresco del inventario
 		this.setAutoInventoryRefresh(true);
-		try {
-			engine = new Rete();
-		
-			// Inicializacion del motor de inferencias
-                        
-                        ////System.out.println("Velocidad: " + this.velx);
-                        //this.setBotMovement(prevPosPlayer, prevPosPlayer, distanciaEnemigo, velx);
-                        
-                        // Propio
-                          
-                        engine.batch(rutas.Jess_path);
-                        engine.eval("(reset)");
-                        engine.assertString("(color rojo)");
-                        
-                        engine.run();
-			
-                        Value v = engine.eval("?*VARGLOB*");
-               //         //System.out.println(v.intValue(engine.getGlobalContext()));
 
-		} catch (JessException je) {
-		/*	//System.out.println("initBot: Error en la linea " + je.getLineNumber());
-			//System.out.println("Codigo:\n" + je.getProgramText());
-			//System.out.println("Mensaje:\n" + je.getMessage());
-			//System.out.println("Abortado");*/
-			//System.exit(1);
-		}
 	}
 
         //Distintos valores que puede dar decideBattle()
@@ -328,21 +303,23 @@ public final class MiBotseMueve extends ObserverBot
         //Decide el objetivo a largo plazo
         private Origin decideGoal()
         {
-            int WAH = -1;
-            int itemIndex = -1;
-            WAH = decideGlobalGoal();
-            itemIndex = decideItem(WAH);
-            return getClosestItemLocation(itemIndex);
+		try {
+			engine = new Rete();
+                          
+                        engine.batch(rutas.Jess_path);
+                        engine.eval("(reset)");
+                        engine.assertString("(color rojo)");
+                        
+                        engine.run();
+			
+                        Value v = engine.eval("?*VARGLOB*");
+
+		} catch (JessException je) {
+		}
+                return null;
         }
         
-        private int decideGlobalGoal() {
-            
-            return 0;
-        }
-        
-        private int decideItem(int WAH) {
-            return 0;
-        }
+
         
         private Origin getClosestItemLocation(int itemIndex) {
             return null;
