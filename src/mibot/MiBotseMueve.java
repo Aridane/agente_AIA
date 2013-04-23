@@ -326,6 +326,11 @@ public final class MiBotseMueve extends ObserverBot
         //Decide el objetivo a largo plazo
         private Origin decideGoal()
         {
+            //int WAH = -1;
+            //int itemIndex = -1;
+            //WAH = decideGlobalGoal();
+            //itemIndex = decideItem(WAH);
+            //return getClosestItemLocation(itemIndex);
             return null;
         }
         
