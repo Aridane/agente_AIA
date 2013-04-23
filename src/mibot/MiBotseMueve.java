@@ -10,6 +10,8 @@ import soc.qase.state.Player;
 import soc.qase.state.PlayerMove;
 import soc.qase.state.World;
 import soc.qase.tools.vecmath.Vector3f;
+import soc.qase.state.Inventory;
+
 
 import soc.qase.state.*;
 
@@ -49,9 +51,16 @@ public final class MiBotseMueve extends ObserverBot
 	
 	// Motor de inferencia
 	private Rete engine;
-        
+        //Spawn, SeekItem, Battle_Chase, Battle_Retreat, Battle_Engage
+        private String State = "Spawn";
         
         private Waypoint [] route;
+        
+        private int healthLowLimit = 40;
+        private int healthHighLimit = 80;
+        private int armourLowLimit = 30;
+        private int armourHighLimit = 80;
+               
         
         int dire = 0;
         
@@ -150,7 +159,7 @@ public final class MiBotseMueve extends ObserverBot
         Origin goalPos;
         
         //El objetivo se ha cumplido o no;
-        boolean goal;
+        boolean goal = false;
         
         //Posicion del siguiente waypoint al que ir
         Origin nextWayPoint;
@@ -173,26 +182,24 @@ public final class MiBotseMueve extends ObserverBot
         
         Entity enemy;
         
+        int count = 0;
+                    boolean quieto = true;
         public void runAI(World w)
 	{
             if (mibsp==null) mibsp = new BSPParser(rutas.BSP_path);
                     //"C:\\Users\\alvarin\\Desktop\\Dropbox\\Quinto\\AIA\\Qase\\q2dm1.bsp");
 
             world = w;
-
             player = world.getPlayer();
             enemy = world.getOpponentByName("Player");
             Vector opponents = world.getOpponents();
-            
-
-             
                 /* if(hasRoute==0)
                 {
                     hasRoute = 1; 
                     route = findShortestPathToWeapon(null);
                     routeLength = route.length;
                 }*/
-            targetPos = new Origin();
+        /*    targetPos = new Origin();
  
             Vector3f mov = new Vector3f(0,0,0);
             Vector3f aim = new Vector3f(-1,0.0001,0.0001);
@@ -249,15 +256,21 @@ public final class MiBotseMueve extends ObserverBot
                     setAction(Action.ATTACK, false);
                 }
             }
-            
-   /*         
+            */
+           
             //Código automata
-            
+           // System.out.println("AUTOMATA");
             int battleStrategy;
+            Vector3f aim = new Vector3f(0,0,0);
+            targetPos = new Origin(0,0,0);
+            nextWayPoint = new Origin(0,0,0);
+            
+
             
             aim.set(targetPos.getX()-player.getPosition().getX(), targetPos.getY()-player.getPosition().getY(), targetPos.getZ()-player.getPosition().getZ());
             if(this.enemyVisible(player.getPosition(),mibsp, opponents, aim)!=null)
             {
+                System.out.println("VISIBLE");
                 battleStrategy = decideBattle();
                 if(battleStrategy == FIGHT)
                 {
@@ -275,48 +288,107 @@ public final class MiBotseMueve extends ObserverBot
             //No hay enemigo visible
             else
             {
+                //System.out.println("ENEMIGO NO VISIBLE");
                 //Si ya se ha cumplido el objetivo o es el principio obtenemos uno nuevo
-                if(goal)
+                if(!goal)
                 {
+                    System.out.println("decide");
                     actualWayPoint = 0;
-                    goalPos = decideGoal();
-                    route = this.findShortestPath(goalPos);
-                    routeLength = route.length;
+                    goalPos = decideGoal(player);
+                    System.out.println("decidio");
+                    if(goalPos == null) quieto = true;
+                    else
+                    {
+                        quieto = false;
+                        System.out.println("ORIGIN = " + player.getPosition().getX() + " " + player.getPosition().getY() + " " + player.getPosition().getZ());
+                        System.out.println("GOAL = " + goalPos.getX() + " " + goalPos.getY() + " " + goalPos.getZ());
+                        route = this.findShortestPath(goalPos);
+                        routeLength = route.length;
+                        System.out.println("length ruta " + routeLength);
+                    }
+                    goal = true;
                 }
                 
-                //Obtener el siguiente wayPoint
-                nextWayPoint.setX((int)route[actualWayPoint].getPosition().x);
-                nextWayPoint.setY((int)route[actualWayPoint].getPosition().y);
-                nextWayPoint.setZ((int)route[actualWayPoint].getPosition().z);             
+                if(quieto)
+                {
+                    System.out.println("QUIETITO");
+                    arrived = makeMove(player.getPosition(),player.getPosition());
+                    System.out.println("arrived = " + arrived);
+                }
+                else
+                {
+                    //Obtener el siguiente wayPoint
+                    nextWayPoint.setX((int)route[actualWayPoint].getPosition().x);
+                    nextWayPoint.setY((int)route[actualWayPoint].getPosition().y);
+                    nextWayPoint.setZ((int)route[actualWayPoint].getPosition().z);             
                 
-                arrived = makeMove(player.getPosition(),goalPos);
+                    System.out.println("SIG = " + nextWayPoint.getX() + " " + nextWayPoint.getY() + " "+ nextWayPoint.getZ());
+                
+                    arrived = makeMove(player.getPosition(),nextWayPoint);
+                }
                 
                 if(arrived==1) 
                 {
-                    if(actualWayPoint < routeLength - 1) actualWayPoint++;
-                    else goal = true;
+                    if(!quieto)
+                    {
+                        //System.out.println("LLEGO" + actualWayPoint + " " + routeLength);
+                        if(actualWayPoint < routeLength - 1) actualWayPoint++;
+                        else goal = false;
+                    }
+                    else goal = false;
                 }
-            }*/
+            }
 
         }
         
+        
+        int GET_LIFE = 1;
+        int GET_ARMOUR = 2;
+             
         //Decide el objetivo a largo plazo
-        private Origin decideGoal()
+        private Origin decideGoal(Player player)
         {
-		try {
-			engine = new Rete();
-                          
-                        engine.batch(rutas.Jess_path);
-                        engine.eval("(reset)");
-                        engine.assertString("(color rojo)");
-                        
-                        engine.run();
-			
-                        Value v = engine.eval("?*VARGLOB*");
+            int res = -1;
+            try {
+		engine = new Rete();
+                engine.batch(rutas.Jess_path);
+                engine.eval("(reset)");
+                engine.assertString("(currentPosition 100 100 100)");
+                engine.assertString("(health " + player.getArmor() + ")");
+                System.out.println("VIDA = " + player.getHealth());
+                engine.assertString("(armour 30)");
+                
+                engine.assertString("(healthLowLimit " + healthLowLimit + ")");
+                engine.assertString("(armourLowLimit " + armourLowLimit + ")");
+                engine.assertString("(healthHighLimit " + healthHighLimit + ")");
+                engine.assertString("(armourHighLimit " + armourHighLimit + ")");
+                
+                engine.assertString("(items Health BigHealth Armor BigArmor)");
+                engine.assertString("(itemsDistance 30 40 20 50)");
+                
+                engine.assertString("(weapons MG RL RG)");
+                engine.assertString("(ammo 30 6 -1)");
+                engine.assertString("(wDistance 100 30 99)");
+                
+                
+                engine.run();
 
-		} catch (JessException je) {
-		}
-                return null;
+                res = engine.eval("?*ACTION*").intValue(null);
+                System.out.println("res = " + res);
+
+            } catch (JessException je) {
+                System.out.println(je.toString());
+            }
+            if (res == GET_LIFE) {    
+                System.out.println("DAME VIDA");
+                return this.findClosestItem(soc.qase.state.Inventory.ROCKET_LAUNCHER).getPosition().toOrigin();               
+            }
+            else if (res == GET_ARMOUR) {
+                return this.findClosestItem(soc.qase.state.Inventory.ARMOR_SHARD).getPosition().toOrigin();
+            }
+           // return this.findClosestItem(soc.qase.state.Inventory.ROCKET_LAUNCHER).getPosition().toOrigin();
+            return null;
+            
         }
         
 
