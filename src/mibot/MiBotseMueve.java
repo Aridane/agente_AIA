@@ -10,6 +10,8 @@ import soc.qase.state.Player;
 import soc.qase.state.PlayerMove;
 import soc.qase.state.World;
 import soc.qase.tools.vecmath.Vector3f;
+import soc.qase.state.Inventory;
+
 
 import soc.qase.state.*;
 
@@ -49,9 +51,16 @@ public final class MiBotseMueve extends ObserverBot
 	
 	// Motor de inferencia
 	private Rete engine;
-        
+        //Spawn, SeekItem, Battle_Chase, Battle_Retreat, Battle_Engage
+        private String State = "Spawn";
         
         private Waypoint [] route;
+        
+        private int healthLowLimit = 30;
+        private int healthHighLimit = 80;
+        private int armourLowLimit = 30;
+        private int armourHighLimit = 80;
+               
         
         int dire = 0;
         
@@ -173,9 +182,11 @@ public final class MiBotseMueve extends ObserverBot
         
         Entity enemy;
         
+        int count = 0;
+        
         public void runAI(World w)
 	{
-            if (mibsp==null) mibsp = new BSPParser(rutas.BSP_path);
+            //if (mibsp==null) mibsp = new BSPParser(rutas.BSP_path);
                     //"C:\\Users\\alvarin\\Desktop\\Dropbox\\Quinto\\AIA\\Qase\\q2dm1.bsp");
 
             world = w;
@@ -183,16 +194,14 @@ public final class MiBotseMueve extends ObserverBot
             player = world.getPlayer();
             enemy = world.getOpponentByName("Player");
             Vector opponents = world.getOpponents();
-            
-
-             
+            Vector3f aim = new Vector3f(-1,0.0001,0.0001);
                 /* if(hasRoute==0)
                 {
                     hasRoute = 1; 
                     route = findShortestPathToWeapon(null);
                     routeLength = route.length;
                 }*/
-            targetPos = new Origin();
+            /*targetPos = new Origin();
  
             Vector3f mov = new Vector3f(0,0,0);
             Vector3f aim = new Vector3f(-1,0.0001,0.0001);
@@ -248,9 +257,9 @@ public final class MiBotseMueve extends ObserverBot
                     // this.setBotMovement(mov, aim, 100, PlayerMove.POSTURE_NORMAL);
                     setAction(Action.ATTACK, false);
                 }
-            }
+            }*/
             
-   /*         
+           
             //Código automata
             
             int battleStrategy;
@@ -296,27 +305,59 @@ public final class MiBotseMueve extends ObserverBot
                     if(actualWayPoint < routeLength - 1) actualWayPoint++;
                     else goal = true;
                 }
-            }*/
+            }
 
         }
         
+        
+        int GET_LIFE = 1;
+        int GET_ARMOUR = 2;
+             
         //Decide el objetivo a largo plazo
         private Origin decideGoal()
         {
-		try {
-			engine = new Rete();
-                          
-                        engine.batch(rutas.Jess_path);
-                        engine.eval("(reset)");
-                        engine.assertString("(color rojo)");
-                        
-                        engine.run();
-			
-                        Value v = engine.eval("?*VARGLOB*");
+            int res = -1;
+            try {
+		engine = new Rete();
+                         
+                engine.batch(rutas.Jess_path);
+                
+                engine.eval("(reset)");
 
-		} catch (JessException je) {
-		}
-                return null;
+                engine.assertString("(currentPosition 100 100 100)");
+                engine.assertString("(health 30)");
+                engine.assertString("(armour 30)");
+                
+                engine.assertString("(healthLowLimit " + healthLowLimit + ")");
+                engine.assertString("(armourLowLimit " + armourLowLimit + ")");
+                engine.assertString("(healthHighLimit " + healthHighLimit + ")");
+                engine.assertString("(armourHighLimit " + armourHighLimit + ")");
+                
+                engine.assertString("(items Health BigHealth Armor BigArmor)");
+                engine.assertString("(itemsDistance 30 40 20 50)");
+                
+                engine.assertString("(weapons MG RL RG)");
+                engine.assertString("(ammo 30 6 -1)");
+                engine.assertString("(wDistance 100 30 99)");
+                
+            
+                
+                engine.run();
+                count++;
+
+                res = engine.eval("?*ACTION*").intValue(null);
+                
+
+            } catch (JessException je) {
+                
+            }
+            if (res == GET_LIFE) {
+                return this.findClosestItem(soc.qase.state.Inventory.HEALTH).getPosition().toOrigin();
+            }
+            else if (res == GET_ARMOUR) {
+                return this.findClosestItem(soc.qase.state.Inventory.ARMOR_SHARD).getPosition().toOrigin();
+            }
+            return null;
         }
         
 

@@ -41,9 +41,9 @@ public class MiBot {
 		//CreaciÃ³n del bot (pueden crearse mÃºltiples bots)
 		MiBot = new MiBotseMueve("Venus","female/athena");
                 //MiBot2 = new MiBotseMueve("Marte","male/athena");
-		MiBot.setMap(WaypointMapGenerator.generate(rutas.Map_path, (float)0.2)); //MiBot2.setMap(WaypointMapGenerator.generate("C:\\Users\\alvarin\\Desktop\\Dropbox\\Quinto\\AIA\\Quake\\quake2\\baseq2\\demos\\level.dm2", (float)0.2));
+		//MiBot.setMap(WaypointMapGenerator.generate(rutas.Map_path, (float)0.2)); //MiBot2.setMap(WaypointMapGenerator.generate("C:\\Users\\alvarin\\Desktop\\Dropbox\\Quinto\\AIA\\Quake\\quake2\\baseq2\\demos\\level.dm2", (float)0.2));
 		//Conecta con el localhost (el servidor debe estar ya lanzado para que se produzca la conexiÃ³n)
-		MiBot.connect("127.0.0.1",27910);//Ejemplo de conexiÃ³n a la mÃ¡quina local
+		MiBot.connect(getIpAddress(),27910);//Ejemplo de conexiÃ³n a la mÃ¡quina local
                 System.out.println("Connection State: ");
                 System.out.println(MiBot.isConnected());
                 System.out.println("...");
@@ -54,8 +54,9 @@ public class MiBot {
                     }
                 }));
                 //MiBot2.connect("127.0.0.1",27910);//Ejemplo de conexiÃ³n a la mÃ¡quina local  
+                System.out.println("...");
 	}
-       /* public static String getIpAddress(){
+        public static String getIpAddress(){
         String res = "127.0.0.1";
 
         try{
@@ -85,6 +86,6 @@ public class MiBot {
         //so the / must be deleted
         res = res.split("/")[1].trim();
         return res;
-    }*/
+    }
 }
 
