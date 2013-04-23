@@ -146,7 +146,7 @@ public final class MiBotseMueve extends ObserverBot
                         
                         // Propio
                           
-                        engine.batch("C:\\Users\\alvarin\\Desktop\\Dropbox\\Quinto\\AIA\\AIJess.clp");
+                        engine.batch(MiBot.rutas.Jess_path);
                         engine.eval("(reset)");
                         engine.assertString("(color rojo)");
                         
@@ -198,7 +198,8 @@ public final class MiBotseMueve extends ObserverBot
         
         public void runAI(World w)
 	{
-            if (mibsp==null) mibsp = new BSPParser("C:\\Users\\alvarin\\Desktop\\Dropbox\\Quinto\\AIA\\Qase\\q2dm1.bsp");
+            if (mibsp==null) mibsp = new BSPParser(MiBot.rutas.BSP_path);
+                    //"C:\\Users\\alvarin\\Desktop\\Dropbox\\Quinto\\AIA\\Qase\\q2dm1.bsp");
 
             world = w;
 
@@ -330,7 +331,7 @@ public final class MiBotseMueve extends ObserverBot
         
         private int decideBattle()
         {
-
+            return 0;
         }
        
 	/*-------------------------------------------------------------------*/
