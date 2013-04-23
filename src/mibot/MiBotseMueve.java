@@ -31,6 +31,8 @@ public final class MiBotseMueve extends ObserverBot
 	private World world = null;
 	private Player player = null;
         
+        private Rutas rutas = new Rutas();
+        
         private Vector3f PosPlayer= new Vector3f(0, 0, 0);
 	
 	//Variable que almacena la posiciÃ³n previa del jugador en 3D, inicializada en 0,0,0
@@ -146,7 +148,7 @@ public final class MiBotseMueve extends ObserverBot
                         
                         // Propio
                           
-                        engine.batch(MiBot.rutas.Jess_path);
+                        engine.batch(rutas.Jess_path);
                         engine.eval("(reset)");
                         engine.assertString("(color rojo)");
                         
@@ -198,7 +200,7 @@ public final class MiBotseMueve extends ObserverBot
         
         public void runAI(World w)
 	{
-            if (mibsp==null) mibsp = new BSPParser(MiBot.rutas.BSP_path);
+            if (mibsp==null) mibsp = new BSPParser(rutas.BSP_path);
                     //"C:\\Users\\alvarin\\Desktop\\Dropbox\\Quinto\\AIA\\Qase\\q2dm1.bsp");
 
             world = w;
