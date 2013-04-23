@@ -16,3 +16,7 @@
     (printout t "Bien! color azul" crlf)
     (bind ?*VARGLOB* 456)
 )
+
+(defrule decideGoal
+    (
+)

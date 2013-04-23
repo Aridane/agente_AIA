@@ -1,6 +1,6 @@
 package mibot;
 
-import java.awt.*;
+import java.io.IOException;
 import java.util.Vector;
 import java.util.Random;
 
@@ -14,10 +14,14 @@ import soc.qase.tools.vecmath.Vector3f;
 import soc.qase.state.*;
 
 import java.lang.Math;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import jess.*;
 import soc.qase.ai.waypoint.Waypoint;
 import soc.qase.ai.waypoint.WaypointMap;
 import soc.qase.ai.waypoint.WaypointMapGenerator;
+
+
 
 
 //Cualquier bot debe extender a la clase ObserverBot, para hacer uso de sus funcionalidades
@@ -37,8 +41,6 @@ public final class MiBotseMueve extends ObserverBot
 	
 	//Acceso a la informaciÃ³n del entorno
 	private BSPParser mibsp = null;
-        
-        private WaypointMap wpMap = null;
 	
 	// Distancia al enemigo que estamos atacando
 	private float distanciaEnemigo = Float.MAX_VALUE;
@@ -46,19 +48,12 @@ public final class MiBotseMueve extends ObserverBot
 	// Motor de inferencia
 	private Rete engine;
         
-        private boolean onRoute = false;
-        
-        private int routeCount = 0;
-        
-        private int routeCountLimit = 2000000000;
-        
-        Waypoint nextWp = null;
         
         private Waypoint [] route;
         
         int dire = 0;
         
-        int DIR = 200;
+        Origin targetPos;
 
 /*-------------------------------------------------------------------*/
 /**	Constructor que permite especificar el nombre y aspecto del bot
@@ -146,86 +141,196 @@ public final class MiBotseMueve extends ObserverBot
 		
 			// Inicializacion del motor de inferencias
                         
-                        //System.out.println("Velocidad: " + this.velx);
+                        ////System.out.println("Velocidad: " + this.velx);
                         //this.setBotMovement(prevPosPlayer, prevPosPlayer, distanciaEnemigo, velx);
                         
                         // Propio
                           
-                        engine.batch(MiBot.rutas.Jess_path);
+                        engine.batch("C:\\Users\\alvarin\\Desktop\\Dropbox\\Quinto\\AIA\\AIJess.clp");
                         engine.eval("(reset)");
                         engine.assertString("(color rojo)");
                         
                         engine.run();
 			
                         Value v = engine.eval("?*VARGLOB*");
-                        System.out.println(v.intValue(engine.getGlobalContext()));
+               //         //System.out.println(v.intValue(engine.getGlobalContext()));
 
 		} catch (JessException je) {
-			System.out.println("initBot: Error en la linea " + je.getLineNumber());
-			System.out.println("Codigo:\n" + je.getProgramText());
-			System.out.println("Mensaje:\n" + je.getMessage());
-			System.out.println("Abortado");
-			System.exit(1);
+		/*	//System.out.println("initBot: Error en la linea " + je.getLineNumber());
+			//System.out.println("Codigo:\n" + je.getProgramText());
+			//System.out.println("Mensaje:\n" + je.getMessage());
+			//System.out.println("Abortado");*/
+			//System.exit(1);
 		}
 	}
 
+        //Distintos valores que puede dar decideBattle()
+        int FIGHT = 0;
+        int CHASE = 1;
+        int RUNAWAY = 2;
+        
+        //Posicion del objetivo a largo plazo
+        Origin goalPos;
+        
+        //El objetivo se ha cumplido o no;
+        boolean goal;
+        
+        //Posicion del siguiente waypoint al que ir
+        Origin nextWayPoint;
+        
+        int hasRoute = 0;
+        int routeLength;
+        int actualWayPoint = 0;
+        int arrived = 0;
+        Origin enemyPos = new Origin(0,0,0);
 /*-------------------------------------------------------------------*/
 /**	Rutina central del agente para especificar su comportamiento
  *	@param w Objeto de tipo World que contiene el estado actual del juego */
 /*-------------------------------------------------------------------*/
         
+        
         public void setMap(WaypointMap map)
         {
             this.wpMap = map;
         }
-                
+        
+        Entity enemy;
+        
         public void runAI(World w)
 	{
-            System.out.println("AI...\n");
-            if (mibsp==null)
-			mibsp = this.getBSPParser();
+            if (mibsp==null) mibsp = new BSPParser("C:\\Users\\alvarin\\Desktop\\Dropbox\\Quinto\\AIA\\Qase\\q2dm1.bsp");
+
+            world = w;
+
+            player = world.getPlayer();
+            enemy = world.getOpponentByName("Player");
+            Vector opponents = world.getOpponents();
             
-            System.out.println("AI...\n");
-            //InformaciÃ³n del juego almacenada en una variable miembro
-		world = w;
-		
-		//Obtiene informaciÃ³n del bot
-		player = world.getPlayer();
-                        
-                /*System.out.println("Is Running? " + player.isRunning() + "\n");
-                System.out.println("getPosition " + player.getPosition() + "\n");
-                System.out.println("isAlive " + player.isAlive() + "\n");
-                
-                System.out.println("Arma visible?..." + BuscaArmaVisible() + "\n");
-                System.out.println("Entidad visible?..." + BuscaEntidad() + "\n");*/
-                    
-                EstableceDirMovimiento();
-				
-                // Funciones auxiliares
-                Estado();
-                DistObs();
-                
-                setAction(Action.ATTACK, true);
-                
-                try 
+
+             
+                /* if(hasRoute==0)
                 {
-                    engine.retractString("(color rojo)");
-                    engine.assertString("(color rojo)");
-                    
-                    engine.assertString("(color azul)");
-                    engine.run();
-                    engine.eval("(facts)");
-                    
-                    Value v = engine.eval("?*VARGLOB*");
-                    System.out.println(v.intValue(engine.getGlobalContext()));
-                    
-                } catch (JessException je) {
-                    System.out.println("initBot: Error en la linea " + je.getLineNumber());
-                    System.out.println("Codigo:\n" + je.getProgramText());
-                    System.out.println("Mensaje:\n" + je.getMessage());
-                    System.out.println("Abortado");
-                    System.exit(1);
-		}
+                    hasRoute = 1; 
+                    route = findShortestPathToWeapon(null);
+                    routeLength = route.length;
+                }*/
+            targetPos = new Origin();
+ 
+            Vector3f mov = new Vector3f(0,0,0);
+            Vector3f aim = new Vector3f(-1,0.0001,0.0001);
+                
+            if(enemy == null)
+            {
+                this.setBotMovement(mov, aim, 100, PlayerMove.POSTURE_NORMAL);
+                System.out.println(this.getName() + " no hay enemigos");
+            }
+            else 
+            {
+                System.out.println("enemy antes = " + enemyPos.getX() + " " + enemyPos.getY() + " " + enemyPos.getZ());
+                System.out.println("enemy ahora = " + enemy.getOrigin().getX() + " " + enemy.getOrigin().getY() + " " + enemy.getOrigin().getZ());
+                //Si el enemigo se ha movido
+                if((enemy.getOrigin().getX() != enemyPos.getX()) || (enemy.getOrigin().getY() != enemyPos.getY()) || (enemy.getOrigin().getZ() != enemyPos.getZ()))
+                {
+                    System.out.println("nueva ruta");
+                    actualWayPoint = 0;
+                    //Obtenemos la nueva ruta
+                    route = this.findShortestPath(enemy.getOrigin());
+                    routeLength = route.length;
+                    System.out.println("ruta = " + routeLength);
+                    enemyPos.setX(enemy.getOrigin().getX());
+                    enemyPos.setY(enemy.getOrigin().getY());
+                    enemyPos.setZ(enemy.getOrigin().getZ());
+                }
+                else System.out.println("vieja ruta");
+                targetPos.setX((int)route[actualWayPoint].getPosition().x);
+                targetPos.setY((int)route[actualWayPoint].getPosition().y);
+                targetPos.setZ((int)route[actualWayPoint].getPosition().z);                   
+                arrived = makeMove(player.getPosition(),targetPos);
+  
+                if(arrived==1) 
+                {
+                    if(actualWayPoint < routeLength - 1) actualWayPoint++;
+                }
+   //             System.out.println(this.getName() + "Enemigo = " +enemy.getOrigin().getX() +  " " + enemy.getOrigin().getY() + " " + enemy.getOrigin().getZ());
+                Vector3f vecPlay = new Vector3f(player.getPosition());
+                Vector3f vecEne = new Vector3f(enemy.getOrigin());
+  //              System.out.println("BOT = " + vecPlay.x + " " + vecPlay.y + " " + vecPlay.z);
+  //              System.out.println("ENEMIGO = " + vecEne.x + " " + vecEne.y + " " + vecEne.z);
+                //Si es visible ataca
+                aim.set(targetPos.getX()-player.getPosition().getX(), targetPos.getY()-player.getPosition().getY(), targetPos.getZ()-player.getPosition().getZ());
+                if(this.enemyVisible(player.getPosition(),mibsp, opponents, aim)!=null)
+                {
+                    aim = new Vector3f(enemy.getOrigin().getX() - player.getPosition().getX(),enemy.getOrigin().getY() - player.getPosition().getY(),enemy.getOrigin().getZ() - player.getPosition().getZ());
+                    this.setBotMovement(mov, aim, 100, PlayerMove.POSTURE_NORMAL);
+                    setAction(Action.ATTACK, true);
+     //                   System.out.println("VISIBLE");
+                }
+                else 
+                {
+                    // this.setBotMovement(mov, aim, 100, PlayerMove.POSTURE_NORMAL);
+                    setAction(Action.ATTACK, false);
+                }
+            }
+            
+   /*         
+            //Código automata
+            
+            int battleStrategy;
+            
+            aim.set(targetPos.getX()-player.getPosition().getX(), targetPos.getY()-player.getPosition().getY(), targetPos.getZ()-player.getPosition().getZ());
+            if(this.enemyVisible(player.getPosition(),mibsp, opponents, aim)!=null)
+            {
+                battleStrategy = decideBattle();
+                if(battleStrategy == FIGHT)
+                {
+                    //Atacar
+                }
+                if(battleStrategy == CHASE)
+                {
+                    //Perseguir
+                }
+                if(battleStrategy == RUNAWAY)
+                {
+                    //Huir
+                }
+            }
+            //No hay enemigo visible
+            else
+            {
+                //Si ya se ha cumplido el objetivo o es el principio obtenemos uno nuevo
+                if(goal)
+                {
+                    actualWayPoint = 0;
+                    goalPos = decideGoal();
+                    route = this.findShortestPath(goalPos);
+                    routeLength = route.length;
+                }
+                
+                //Obtener el siguiente wayPoint
+                nextWayPoint.setX((int)route[actualWayPoint].getPosition().x);
+                nextWayPoint.setY((int)route[actualWayPoint].getPosition().y);
+                nextWayPoint.setZ((int)route[actualWayPoint].getPosition().z);             
+                
+                arrived = makeMove(player.getPosition(),goalPos);
+                
+                if(arrived==1) 
+                {
+                    if(actualWayPoint < routeLength - 1) actualWayPoint++;
+                    else goal = true;
+                }
+            }*/
+
+        }
+        
+        //Decide el objetivo a largo plazo
+        private Origin decideGoal()
+        {
+            return null;
+        }
+        
+        private int decideBattle()
+        {
+
         }
        
 	/*-------------------------------------------------------------------*/
@@ -233,126 +338,129 @@ public final class MiBotseMueve extends ObserverBot
 	/**	BÃ¡sicamente, si detecta que el bot no avanza durante un tiempo   */
 	/**	cambia su direcciÃ³n de movimiento							     */
 	/*-------------------------------------------------------------------*/
-	private void EstableceDirMovimiento()
+        
+                     double aim_x = 1.0;
+                     double aim_y = 0;
+                     double aim_z = 0.0;
+                     int vel_y = 0;
+                     int vel_x = 1;
+                     int contador = 0;
+                     int posBien = 0;
+          
+        //macros (ir de frente, de espaldas, de lado...)
+        int FRONT = 0;
+        int BACK = 1;
+        int RIGHT = 2;
+        int LEFT = 3;
+                     
+        //Establece la direccion de movimiento y devuelve si se ha llegado
+        //al objetivo o no
+        private int makeMove(Origin sourcePos,Origin targetPos)
+        {
+            //Obtener la diferencia
+            int X = targetPos.getX() - sourcePos.getX();
+            int Y = targetPos.getY() - sourcePos.getY();
+            double stepX;
+            double stepY;
+            
+            //Establecer el incremento para llegar al objetivo
+            if(X > 0) stepX = 1;
+            else if(X < 0) stepX = -1;
+            else stepX = 0.0001;
+            
+            if(Y > 0) stepY = 1;
+            else if(Y < 0) stepY = -1;
+            else stepY = 0.0001;
+            
+            Vector3f dirMov = new Vector3f(0,0,0);
+            dirMov.set((int)stepX,(int)stepY,0);
+
+            setBotMovement(dirMov, dirMov, 1, PlayerMove.POSTURE_NORMAL);
+            if((X <= 20) && (X >= -20) && (Y <= 20) && (Y >= -20)) return 1;
+            else return 0;
+        }
+        
+        private Origin enemyVisible(Origin playerPos,BSPParser bsp,Vector opponents,Vector3f aim)
+        {
+            Entity enemy;
+            Vector3f aimEnemy = new Vector3f();
+            for(int i=0;i<opponents.size();i++)
+            {
+                enemy = (Entity)opponents.get(i);
+                aimEnemy.set(enemy.getOrigin().getX()-playerPos.getX(), enemy.getOrigin().getY()-playerPos.getY(), enemy.getOrigin().getZ()-playerPos.getZ());
+                aimEnemy.angle(aim);
+                if((aimEnemy.angle(aim) < 90) && (bsp.isVisible(playerPos.toVector3f(), enemy.getOrigin().toVector3f())))
+                {
+                    return enemy.getOrigin();
+                }
+            }
+            return null;
+        }
+                     
+	private void EstableceDirMovimiento() throws IOException
 	{
 		//Mostrar posiciÃ³n del bot
-		System.out.println("PosiciÃ³n actual: ("+player.getPlayerMove().getOrigin().getX()+","+
-				player.getPlayerMove().getOrigin().getY()+","+
-				player.getPlayerMove().getOrigin().getZ()+")");	
+		//System.out.println("PosiciÃ³n actual: ("+player.getPlayerMove().getOrigin().getX()+","+
+//				player.getPlayerMove().getOrigin().getY()+","+
+//				player.getPlayerMove().getOrigin().getZ()+")");	
 		
-		//Calcula la distancia desde la posiciÃ³n previa y la actual
-		//double dist = Math.sqrt(Math.pow(prevPosPlayer.y - player.getPlayerMove().getOrigin().getY(),2)+
-		//		Math.pow(prevPosPlayer.x - player.getPlayerMove().getOrigin().getX(),2));
-		
-		//Si la distancia es baja y no es la primera vez que lo preguntamos (nsinavanzar vale 0 en ese caso)
-		/*if (dist < 5 && nsinavanzar>0)
-		{
-			nsinavanzar++;
-			
-			//Tras 10 veces sin moverse cambia de sentido
-			if (nsinavanzar>5)
-			{
-				//Provoca un cambio de sentido en la direcciÃ³n y de la velocidad
-				vely = (int)(Math.random()*20)-10; 
-							
-				//Resetea el nÃºmero de veces en que ha preguntado y no hubo movimiento
-				nsinavanzar=1;
-				
-				//Incrementa el contador de cambios de direcciÃ³n
-				cambios++;
-				
-				//Si es un nÃºmero par cambia tambiÃ©n el sentido de la velocidad en x
-				if (cambios == 2)
-				{
-					cambios = 0;
-					velx = (int)(Math.random()*20)-10;
-				}			
-				
-				//Muestra la nueva direcciÃ³n de la velocidad
-				System.out.println("Cambio de direcciÃ³n de movimiento, x = " + velx + ", y = " + vely);
-			}		
-			
-		}
-		else// Se ha movido bastante en relaciÃ³n a la posiciÃ³n previa, guarda la posiciÃ³n actual
-		{
-			nsinavanzar=1;
-			
-			//Actualiza la que serÃ¡ la posiciÃ³n previa para la siguiente iteraciÃ³n
-			prevPosPlayer.set(player.getPlayerMove().getOrigin().getX(),
-					player.getPlayerMove().getOrigin().getY(),
-					player.getPlayerMove().getOrigin().getZ());				
-		}*/
-		
-                Vector3f posFut = new Vector3f(player.getPlayerMove().getOrigin().getX() + velx*3,
-                                               player.getPlayerMove().getOrigin().getY() + vely*3,
-                                               player.getPlayerMove().getOrigin().getZ());
                 
-                Vector3f posAct = new Vector3f(player.getPlayerMove().getOrigin());
-                //if(DIR == 200) DIR = -200;
-                //else DIR = 200;
-                //Vector3f DirVista = new Vector3f(DIR,0, 0);
-                Vector3f DirMov = null;
-                
-                if(!onRoute){
-                    System.out.println("A BUSCAR");
-                    //route = findShortestPathToWeapon(getNearestWeapon(null).getType());
-                    nextWp = wpMap.findClosestWaypoint(this.getPosition()); 
-                    //Waypoint nextWp = this.findClosestWeapon(null);
-                /*if (!mibsp.isVisible(posAct, posFut)) {
-                    //int aux = velx;
-                    velx = -velx;
-                
-                    System.out.println("HOLAAAAAAA");
-                    System.out.println("HOLAAAAAAA");
-                    System.out.println("HOLAAAAAAA");
-                                   // DirVista = new Vector3f(-200,0, 0);
-                                   
-                }*/
-                //Crea un vector con la nueva direcciÃ³n de movimiento
-                
-                    DirMov = nextWp.getPosition();
-                    DirMov.sub(posAct);		
-                    onRoute = true;
-                    routeCount = 0;
-                    System.out.println("Voy yendo");
-                    
-                }
-                else {
-                    System.out.println("ESTOY EN RUTA");
-                    posAct.sub(nextWp.getPosition());
-                    System.out.println("ESTOY EN RUTA 2");
-                    if (Math.abs(posAct.x)<10 && Math.abs(posAct.y)<10 && Math.abs(posAct.z)<10){
-                        System.out.println("ESTOY EN RUTA 2 A");
-                        DirMov = nextWp.getEdges()[1].getPosition();
-                        //TODO posACT aqui esta modificada
-                        DirMov.sub(posAct); 
-                        System.out.println("SIGO EN RUTA");
-                        nextWp = nextWp.getEdges()[1];
-                    }
-                    else{
-                        System.out.println("ESTOY EN RUTA 2 B");
-                        DirMov = nextWp.getPosition();
-                        DirMov.sub(posAct);		
-                    }
-                    if (routeCount>routeCountLimit) onRoute = false;
-                    routeCount = routeCount + 1;
-                    System.out.println("ESTOY EN RUTA 3");
-                    
-                }
-                System.out.println("PUNTO DE RUTA "+routeCount);
-                System.out.println("DIRMOVE.X "+DirMov.x);
-                System.out.println("DIRMOVE.Y "+DirMov.y);
-                System.out.println("DIRMOVE.Z "+DirMov.z);
-                //Comanda el movimiento, si el segundo parÃ¡metro es null mira al destino, 
+		Vector3f DirMov = new Vector3f(vel_x,vel_y, 0);
+		Vector3f aim = new Vector3f(aim_x,aim_y,aim_z);	
+		//Comanda el movimiento, si el segundo parÃ¡metro es null mira al destino, 
 		//en otro caso mira en la direcciÃ³n indicada
-		//setBotMovement(DirMov, null, 200, PlayerMove.POSTURE_NORMAL);
-                setBotMovement(DirMov, null, 200, PlayerMove.POSTURE_NORMAL);
-                //Otra postura, p.e. agachado PlayerMove.POSTURE_DUCKED
-		
-		//CÃ³digo ejemplo alternatico para mirar no al destino sino a una direcciÃ³n indicada
-		//Vector3f DirVista = new Vector3f(0, 1, 0);
-		//setBotMovement(DirMov, DirVista, 200, PlayerMove.POSTURE_NORMAL);
-           
+		setBotMovement(DirMov, aim, 200, PlayerMove.POSTURE_NORMAL);
+                if(contador == 10) 
+                 {
+                     contador = 0;
+                     if(vel_y == 1)
+                     {
+                         vel_y = 0;
+                         vel_x = 1;
+                     }
+                     else if(vel_y == 0)
+                     {
+                         if(vel_x == 1)
+                         {
+                             vel_y = -1;
+                             vel_x = 0;
+                         }
+                         else
+                         {
+                             vel_y = 1;
+                             vel_x = 0;
+                         }
+                     }
+                     else
+                     {
+                         vel_y = 0;
+                         vel_x = -1;
+                     }
+                     if(aim_x==1.) 
+                     {
+                         aim_x=0.0001;
+                         aim_y=-1;
+                     }
+                     else if(aim_x == 0.0001)
+                     {
+                         if(aim_y==1)
+                         {
+                             aim_x=1;
+                             aim_y=0.0001;
+                         }
+                         else
+                         {
+                             aim_x=-1;
+                             aim_y=0.0001;
+                         }
+                     }
+                     else if(aim_x==-1.) 
+                     {
+                         aim_x = 0.0001;
+                         aim_y = 1;
+                     }
+                 }
+                 contador++;
 	}
 	
 	/*-------------------------------------------------------------------*/
@@ -364,26 +472,26 @@ public final class MiBotseMueve extends ObserverBot
 	{
 		String nf = "ListaArmamento";
 		
-		System.out.println("---------- Entrando en " + nf);
+	//	//System.out.println("---------- Entrando en " + nf);
 		try {
 			// Limpia toda la informacion anterior
 			engine.reset();
 			
 			if (world.getInventory().getCount(PlayerGun.BLASTER)>=1)
 			{
-				System.out.println("BLASTER");			
+				//System.out.println("BLASTER");			
 			}
 
 			if (world.getInventory().getCount(PlayerGun.SHOTGUN)>=1)//Necesita shells
 			{
-				System.out.print("SHOTGUN");
+				//System.out.print("SHOTGUN");
 				//Consultamos la municiÃ³n a travÃ©s del arma
 				if (world.getInventory().getCount(PlayerGun.getAmmoInventoryIndexByGun(PlayerGun.SHOTGUN))>0)
 				{
-					System.out.print(" y municiones");
+					//System.out.print(" y municiones");
 					engine.store("SHOTGUN", new Value(1, RU.INTEGER));
 				}
-				System.out.println("");
+				//System.out.println("");
 			}
 			else
 			{
@@ -392,14 +500,14 @@ public final class MiBotseMueve extends ObserverBot
 			
 			if (world.getInventory().getCount(PlayerGun.SUPER_SHOTGUN)>=1)//Necesita shells
 			{
-				System.out.print("SUPER_SHOTGUN");
+				//System.out.print("SUPER_SHOTGUN");
 				//Consultamos la municiÃ³n a travÃ©s del arma
 				if (world.getInventory().getCount(PlayerGun.getAmmoInventoryIndexByGun(PlayerGun.SUPER_SHOTGUN))>0)
 				{
-					System.out.print(" y municiones");
+					//System.out.print(" y municiones");
 					engine.store("SUPER_SHOTGUN", new Value(1, RU.INTEGER));
 				}
-				System.out.println("");
+				//System.out.println("");
 			}
 			else
 			{
@@ -409,19 +517,19 @@ public final class MiBotseMueve extends ObserverBot
 			//Consulta SHELLS de forma directa
 			if (world.getInventory().getCount(PlayerGun.SHELLS)>=1)//MuniciÃ³n para Shotgun y Supershotgun
 			{
-				System.out.println("SHELLS disponibles");
+				//System.out.println("SHELLS disponibles");
 			}
 
 			if (world.getInventory().getCount(PlayerGun.CHAINGUN)>=1)//Usa BULLETS
 			{
-				System.out.print("CHAINGUN");
+				//System.out.print("CHAINGUN");
 				//Consultamos la municiÃ³n a travÃ©s del arma
 				if (world.getInventory().getCount(PlayerGun.getAmmoInventoryIndexByGun(PlayerGun.CHAINGUN))>0)
 				{
-					System.out.print(" y municiones");	
+					//System.out.print(" y municiones");	
 					engine.store("CHAINGUN", new Value(1, RU.INTEGER));
 				}
-				System.out.println("");
+				//System.out.println("");
 			}
 			else
 			{
@@ -430,14 +538,14 @@ public final class MiBotseMueve extends ObserverBot
 			
 			if (world.getInventory().getCount(PlayerGun.MACHINEGUN)>=1)//Usa BULLETS
 			{
-				System.out.print("MACHINEGUN");
+				//System.out.print("MACHINEGUN");
 				//Consultamos la municiÃ³n a travÃ©s del arma
 				if (world.getInventory().getCount(PlayerGun.getAmmoInventoryIndexByGun(PlayerGun.MACHINEGUN))>0)
 				{
-					System.out.print(" y municiones");	
+					//System.out.print(" y municiones");	
 					engine.store("MACHINEGUN", new Value(1, RU.INTEGER));
 				}
-				System.out.println("");
+				//System.out.println("");
 			}
 			else
 			{
@@ -446,31 +554,31 @@ public final class MiBotseMueve extends ObserverBot
 			
 			if (world.getInventory().getCount(PlayerGun.BULLETS)>=1)//MuniciÃ³n para chaingun y machinegun
 			{
-				System.out.println("BULLETS disponibles");
+				//System.out.println("BULLETS disponibles");
 			}
 
 			if (world.getInventory().getCount(PlayerGun.GRENADE_LAUNCHER )>=1)//Usa GRENADES
 			{
-				System.out.println("GRENADE_LAUNCHER \n");
+				//System.out.println("GRENADE_LAUNCHER \n");
 				//Consultamos la municiÃ³n a travÃ©s del arma
-				if (world.getInventory().getCount(PlayerGun.getAmmoInventoryIndexByGun(PlayerGun.GRENADE_LAUNCHER ))>0)
-					System.out.println("y municiones\n");	
+			//	if (world.getInventory().getCount(PlayerGun.getAmmoInventoryIndexByGun(PlayerGun.GRENADE_LAUNCHER ))>0)
+					//System.out.println("y municiones\n");	
 			}	
 			
 			int cantidad = world.getInventory().getCount(PlayerGun.GRENADES);
 			if (cantidad >= 1)//MuniciÃ³n para grenade launcher
 			{
-				System.out.println("GRENADES disponibles");
+				//System.out.println("GRENADES disponibles");
 			}
 			engine.store("GRENADES", new Value(cantidad, RU.INTEGER));				
 			
 			if (world.getInventory().getCount(PlayerGun.ROCKET_LAUNCHER )>=1)//Usa Rockets
 			{
-				System.out.println("ROCKET_LAUNCHER");
+				//System.out.println("ROCKET_LAUNCHER");
 //				Consultamos la municiÃ³n a travÃ©s del arma
 				if (world.getInventory().getCount(PlayerGun.getAmmoInventoryIndexByGun(PlayerGun.ROCKET_LAUNCHER ))>0)
 				{
-					System.out.println(" y municiones");
+					//System.out.println(" y municiones");
 					engine.store("ROCKET_LAUNCHER", new Value(1, RU.INTEGER));
 				}	
 			}
@@ -480,38 +588,38 @@ public final class MiBotseMueve extends ObserverBot
 			}
 			if (world.getInventory().getCount(PlayerGun.ROCKETS )>=1)//MuniciÃ³n para ROCKET_LAUNCHER 
 			{
-				System.out.println("ROCKETS disponibles");
+				//System.out.println("ROCKETS disponibles");
 			}
 
 			if (world.getInventory().getCount(PlayerGun.HYPERBLASTER)>=1)//Usa CELLS
 			{
-				System.out.println("HYPERBLASTER\n");
+				//System.out.println("HYPERBLASTER\n");
 //				Consultamos la municiÃ³n a travÃ©s del arma
-				if (world.getInventory().getCount(PlayerGun.getAmmoInventoryIndexByGun(PlayerGun.HYPERBLASTER))>0)
-					System.out.println("y municiones\n");	
+	//			if (world.getInventory().getCount(PlayerGun.getAmmoInventoryIndexByGun(PlayerGun.HYPERBLASTER))>0)
+					//System.out.println("y municiones\n");	
 			}
 			if (world.getInventory().getCount(PlayerGun.BFG10K)>=1)
 			{
-				System.out.println("BFG10K\n");
+				//System.out.println("BFG10K\n");
 //				Consultamos la municiÃ³n a travÃ©s del arma
-				if (world.getInventory().getCount(PlayerGun.getAmmoInventoryIndexByGun(PlayerGun.BFG10K))>0)
-					System.out.println("y municiones\n");	
+		//		if (world.getInventory().getCount(PlayerGun.getAmmoInventoryIndexByGun(PlayerGun.BFG10K))>0)
+					//System.out.println("y municiones\n");	
 			}	
 			if (world.getInventory().getCount(PlayerGun.CELLS)>=1)//MuniciÃ³n para BFG10K e HYPERBLASTER
 			{
-				System.out.println("CELLS disponibles");
+				//System.out.println("CELLS disponibles");
 			}
 
 			if (world.getInventory().getCount(PlayerGun.RAILGUN)>=1)//Usa SLUGS
 			{
-				System.out.println("RAILGUN\n");
+				//System.out.println("RAILGUN\n");
 //				Consultamos la municiÃ³n a travÃ©s del arma
-				if (world.getInventory().getCount(PlayerGun.getAmmoInventoryIndexByGun(PlayerGun.RAILGUN))>0)
-					System.out.println("y municiones\n");	
+		//		if (world.getInventory().getCount(PlayerGun.getAmmoInventoryIndexByGun(PlayerGun.RAILGUN))>0)
+					//System.out.println("y municiones\n");	
 			}
 			if (world.getInventory().getCount(PlayerGun.SLUGS)>=1)//MuniciÃ³n para RAILGUN
 			{
-				System.out.println("SLUGS disponibles");
+				//System.out.println("SLUGS disponibles");
 			}	
 
 			//Una vez conocidas las armas disponibles y la situaciÃ³n, puede ser Ãºtil cambiar el arma activa
@@ -520,13 +628,13 @@ public final class MiBotseMueve extends ObserverBot
 		} 
 		catch (JessException je) 
 		{
-			System.out.println(nf + "Error en la linea " + je.getLineNumber());
-			System.out.println("Codigo:\n" + je.getProgramText());
-			System.out.println("Mensaje:\n" + je.getMessage());
-			System.out.println("Abortado");
-			System.exit(1);
+			//System.out.println(nf + "Error en la linea " + je.getLineNumber());
+			//System.out.println("Codigo:\n" + je.getProgramText());
+			//System.out.println("Mensaje:\n" + je.getMessage());
+			//System.out.println("Abortado");
+			//System.exit(1);
 		}
-		System.out.println("---------- Saliendo de " + nf);
+		//System.out.println("---------- Saliendo de " + nf);
 	}
 	
 	
@@ -537,14 +645,14 @@ public final class MiBotseMueve extends ObserverBot
 	private void EscogeArma()
 	{
 		String nf="=========== EscogeArma: ";
-		System.out.println(nf + " ENTRANDO EN LA FUNCION");
+		//System.out.println(nf + " ENTRANDO EN LA FUNCION");
 
 		try {
 
 			engine.store("DISTANCIA", new Value(distanciaEnemigo, RU.FLOAT));
 			int health = getHealth();
 			engine.store("HEALTH", new Value(health, RU.INTEGER));
-			System.out.println("Distancia: " + distanciaEnemigo + "  Salud: " + health);
+			//System.out.println("Distancia: " + distanciaEnemigo + "  Salud: " + health);
 //			engine.batch("armas_v03.clp");
 			engine.assertString("(inicio)");
 			engine.run();
@@ -552,7 +660,7 @@ public final class MiBotseMueve extends ObserverBot
 			Value vsalida = engine.fetch("SALIDA");
 			String salida = vsalida.stringValue(engine.getGlobalContext());
 //			String salida = vsalida.stringValue(null);
-			System.out.println("Jess me aconseja: " + salida);
+			//System.out.println("Jess me aconseja: " + salida);
 			// Cambia el arma en funcion del consejo dado por Jess
 			if (salida.compareTo("Blaster") == 0)
 			{
@@ -584,14 +692,14 @@ public final class MiBotseMueve extends ObserverBot
 			}
 
 		} catch (JessException je) {
-			System.out.println(nf + "Error en la linea " + je.getLineNumber());
-			System.out.println("Codigo:\n" + je.getProgramText());
-			System.out.println("Mensaje:\n" + je.getMessage());
-			System.out.println("Abortado");
-			System.exit(1);
+			//System.out.println(nf + "Error en la linea " + je.getLineNumber());
+			//System.out.println("Codigo:\n" + je.getProgramText());
+			//System.out.println("Mensaje:\n" + je.getMessage());
+			//System.out.println("Abortado");
+			//System.exit(1);
 		}
 		
-		System.out.println(nf + " SALIENDO DE LA FUNCION");
+		//System.out.println(nf + " SALIENDO DE LA FUNCION");
 	} // EscogeArma
 	
 	
@@ -606,19 +714,19 @@ public final class MiBotseMueve extends ObserverBot
 	private void Estado()
 	{
 		//Escribe la cantidad de actual
-		System.out.println("Vida "+ player.getHealth());
+//		//System.out.println("Vida "+ player.getHealth());
 		
 		
-		System.out.println("mi FRAGS " + player.getPlayerStatus().getStatus(PlayerStatus.FRAGS));
+//		//System.out.println("mi FRAGS " + player.getPlayerStatus().getStatus(PlayerStatus.FRAGS));
 		
 		//Muestra el Ã­ndice del arma activa
 		int aux=player.getWeaponIndex();
-		//System.out.println("Indice arma actual: " + world.getInventory().getItemString(aux));
+		////System.out.println("Indice arma actual: " + world.getInventory().getItemString(aux));
 		//Si el arma activa no es Blaster, escribe su nÃºmero de municiones
-		if (aux!=PlayerGun.BLASTER) System.out.println("Municion arma actual "+ player.getAmmo());
+	//	if (aux!=PlayerGun.BLASTER) //System.out.println("Municion arma actual "+ player.getAmmo());
 		
 		//Parea disponer de informaciÃ³n sobre las municiones
-		System.out.println("Armadura "+ player.getArmor());
+	//	//System.out.println("Armadura "+ player.getArmor());
 		
 	}
 	
@@ -661,7 +769,7 @@ public final class MiBotseMueve extends ObserverBot
 					//Si 
 					if (mibsp.isVisible(weap, pos))
 					{
-						System.out.println("Veo arma\n");
+						//System.out.println("Veo arma\n");
 						
 						//Establece el vetor uniendo el bot y el arma, para indicar la direcciÃ³n que debe
 						//seguir el bot en su movimiento
@@ -722,7 +830,7 @@ public final class MiBotseMueve extends ObserverBot
 				//world.getOpponents();//Obtiene listado de enemigos
 		
 				//Muestra el nÃºmero de entidades disponibles
-				System.out.println("Entidades "+ entities.size());
+				////System.out.println("Entidades "+ entities.size());
 				
 				//Determina la entidad mÃ¡s interesante siguiendo un criterio de distancia en 2D y visibilidad
 				for(int i = 0; i < entities.size(); i++)//Para cada entidad
@@ -731,7 +839,9 @@ public final class MiBotseMueve extends ObserverBot
 					tempEntity = (Entity) entities.elementAt(i);
 					
 					//Muestra la categorÃ­a ("items", "weapons", "objects", o "player")
-					//System.out.println("Entidad de tipo "+ tempEntity.getCategory() + ", tipo " + tempEntity.getType() + ", subtipo " + tempEntity.getSubType());
+				//
+                                        
+                                        //System.out.println("Entidad de tipo "+ tempEntity.getCategory() + ", tipo " + tempEntity.getType() + ", subtipo " + tempEntity.getSubType());
 					
 					//Obtiene la posiciÃ³n de la entidad que estÃ¡ siendo analizada
 					entityOrigin = tempEntity.getOrigin();
@@ -816,13 +926,13 @@ public final class MiBotseMueve extends ObserverBot
 				Entity enemy=null;
 // Tengo que descomentar esto -->  enemy=this.getNearestEnemy();//Obtiene el enemigo mÃ¡s cercano
 				if (enemy!=null)
-					System.out.println("Hay enemigo cercano ");
+					//System.out.println("Hay enemigo cercano ");
 					
 //				Obtiene informaciÃ³n de todos los enemigos
 				enemies = world.getOpponents();
 			
 				//Muestra el nÃºmero de enemigos disponibles
-				System.out.println("Enemigos "+ enemies.size());
+				//System.out.println("Enemigos "+ enemies.size());
 				
 				//Determina el enemigo mÃ¡s interesante siguiendo un criterio de distancia en 2D y visibilidad
 				for(int i = 0; i < enemies.size(); i++)//Para cada entidad
@@ -875,7 +985,7 @@ public final class MiBotseMueve extends ObserverBot
 					
 					if (NearestVisible)//Si es visible ataca
 					{
-						System.out.println("Ataca enemigo ");
+						//System.out.println("Ataca enemigo ");
 						this.sendConsoleCommand("Modo ataque");
 						
 //						Ã�ngulo del arma
@@ -893,7 +1003,7 @@ public final class MiBotseMueve extends ObserverBot
 					}
 					else//en otro caso intenta ir hacia el enemigo
 					{
-						System.out.println("Hay enemigo, pero no estÃ¡ visible ");
+						//System.out.println("Hay enemigo, pero no estÃ¡ visible ");
 						distanciaEnemigo = Float.MAX_VALUE;
 					}
 					
@@ -922,7 +1032,7 @@ public final class MiBotseMueve extends ObserverBot
 		//La muestra
 		if (distmin!=Float.NaN)
 		{
-			System.out.println("Distancia mmínima obstáculo " + distmin);
+//			//System.out.println("Distancia mmínima obstáculo " + distmin);
 		}			
 	}
 	
