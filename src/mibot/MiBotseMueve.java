@@ -304,8 +304,8 @@ public final class MiBotseMueve extends ObserverBot
                     goalPos = decideGoal(player);
                     System.out.println("decidio");
 
-                    System.out.println("ORIGIN = " + player.getPosition().getX() + " " + player.getPosition().getY() + " " + player.getPosition().getZ());
-                    System.out.println("GOAL = " + goalPos.getX() + " " + goalPos.getY() + " " + goalPos.getZ());
+                    //System.out.println("ORIGIN = " + player.getPosition().getX() + " " + player.getPosition().getY() + " " + player.getPosition().getZ());
+                    //System.out.println("GOAL = " + goalPos.getX() + " " + goalPos.getY() + " " + goalPos.getZ());
                     route = this.findShortestPath(goalPos);
                     if(route == null) routeLength = 0;
                     else routeLength = route.length;
@@ -319,7 +319,7 @@ public final class MiBotseMueve extends ObserverBot
                         nextWayPoint.setY((int)route[actualWayPoint].getPosition().y);
                         nextWayPoint.setZ((int)route[actualWayPoint].getPosition().z);             
                 
-                        System.out.println("SIG = " + nextWayPoint.getX() + " " + nextWayPoint.getY() + " "+ nextWayPoint.getZ());
+                        //System.out.println("SIG = " + nextWayPoint.getX() + " " + nextWayPoint.getY() + " "+ nextWayPoint.getZ());
                 
                         arrived = makeMove(player.getPosition(),nextWayPoint);
                     }
@@ -390,7 +390,19 @@ public final class MiBotseMueve extends ObserverBot
         
         private int decideBattle()
         {
-            return 0;
+        /*
+            Factores:
+            	- Vida actual
+            	- Armadura actual
+            	- Arma actual (Valoracion sobre ella)
+            	- Municion actual
+            	- Segunda "mejor" arma
+            	- municion de Segunda "mejor" arma
+            	- Distancia al objetivo
+            	- Si el objetivo está mirandonos o no
+            
+        */
+        	return FIGHT;
         }
        
 	/*-------------------------------------------------------------------*/
