@@ -55,8 +55,9 @@ public final class MiBotseMueve extends ObserverBot
         private String State = "Spawn";
         
         private Waypoint [] route;
-        
+
         private int healthLowLimit = 30;
+
         private int healthHighLimit = 80;
         private int armourLowLimit = 30;
         private int armourHighLimit = 80;
@@ -159,7 +160,7 @@ public final class MiBotseMueve extends ObserverBot
         Origin goalPos;
         
         //El objetivo se ha cumplido o no;
-        boolean goal;
+        boolean goal = false;
         
         //Posicion del siguiente waypoint al que ir
         Origin nextWayPoint;
@@ -183,25 +184,27 @@ public final class MiBotseMueve extends ObserverBot
         Entity enemy;
         
         int count = 0;
-        
+
         public void runAI(World w)
 	{
+        	System.out.println("...RUN AI...");
             //if (mibsp==null) mibsp = new BSPParser(rutas.BSP_path);
                     //"C:\\Users\\alvarin\\Desktop\\Dropbox\\Quinto\\AIA\\Qase\\q2dm1.bsp");
 
             world = w;
-
             player = world.getPlayer();
             enemy = world.getOpponentByName("Player");
             Vector opponents = world.getOpponents();
-            Vector3f aim = new Vector3f(-1,0.0001,0.0001);
+
                 /* if(hasRoute==0)
                 {
                     hasRoute = 1; 
                     route = findShortestPathToWeapon(null);
                     routeLength = route.length;
                 }*/
-            /*targetPos = new Origin();
+
+        /*    targetPos = new Origin();
+
  
             Vector3f mov = new Vector3f(0,0,0);
             Vector3f aim = new Vector3f(-1,0.0001,0.0001);
@@ -257,16 +260,22 @@ public final class MiBotseMueve extends ObserverBot
                     // this.setBotMovement(mov, aim, 100, PlayerMove.POSTURE_NORMAL);
                     setAction(Action.ATTACK, false);
                 }
-            }*/
-            
+            }
+            */
            
             //Código automata
-            
+           // System.out.println("AUTOMATA");
             int battleStrategy;
+            Vector3f aim = new Vector3f(0,0,0);
+            targetPos = new Origin(0,0,0);
+            nextWayPoint = new Origin(0,0,0);
+            
+
             
             aim.set(targetPos.getX()-player.getPosition().getX(), targetPos.getY()-player.getPosition().getY(), targetPos.getZ()-player.getPosition().getZ());
             if(this.enemyVisible(player.getPosition(),mibsp, opponents, aim)!=null)
             {
+                System.out.println("VISIBLE");
                 battleStrategy = decideBattle();
                 if(battleStrategy == FIGHT)
                 {
@@ -284,26 +293,40 @@ public final class MiBotseMueve extends ObserverBot
             //No hay enemigo visible
             else
             {
+                //System.out.println("ENEMIGO NO VISIBLE");
                 //Si ya se ha cumplido el objetivo o es el principio obtenemos uno nuevo
-                if(goal)
+                if(!goal)
                 {
+                    System.out.println("decide");
                     actualWayPoint = 0;
-                    goalPos = decideGoal();
+                    goalPos = decideGoal(player);
+                    System.out.println("decidio");
+
+                    System.out.println("ORIGIN = " + player.getPosition().getX() + " " + player.getPosition().getY() + " " + player.getPosition().getZ());
+                    System.out.println("GOAL = " + goalPos.getX() + " " + goalPos.getY() + " " + goalPos.getZ());
                     route = this.findShortestPath(goalPos);
-                    routeLength = route.length;
+                    if(route == null) routeLength = 0;
+                    else routeLength = route.length;
+                    System.out.println("length ruta " + routeLength);
+                    goal = true;
                 }
+                    if(routeLength > 0)
+                    {
+                        //Obtener el siguiente wayPoint
+                        nextWayPoint.setX((int)route[actualWayPoint].getPosition().x);
+                        nextWayPoint.setY((int)route[actualWayPoint].getPosition().y);
+                        nextWayPoint.setZ((int)route[actualWayPoint].getPosition().z);             
                 
-                //Obtener el siguiente wayPoint
-                nextWayPoint.setX((int)route[actualWayPoint].getPosition().x);
-                nextWayPoint.setY((int)route[actualWayPoint].getPosition().y);
-                nextWayPoint.setZ((int)route[actualWayPoint].getPosition().z);             
+                        System.out.println("SIG = " + nextWayPoint.getX() + " " + nextWayPoint.getY() + " "+ nextWayPoint.getZ());
                 
-                arrived = makeMove(player.getPosition(),goalPos);
+                        arrived = makeMove(player.getPosition(),nextWayPoint);
+                    }
                 
-                if(arrived==1) 
+                if((arrived==1)||(routeLength == 0))
                 {
+                    //System.out.println("LLEGO" + actualWayPoint + " " + routeLength);
                     if(actualWayPoint < routeLength - 1) actualWayPoint++;
-                    else goal = true;
+                    else goal = false;
                 }
             }
 
@@ -314,18 +337,16 @@ public final class MiBotseMueve extends ObserverBot
         int GET_ARMOUR = 2;
              
         //Decide el objetivo a largo plazo
-        private Origin decideGoal()
+        private Origin decideGoal(Player player)
         {
             int res = -1;
             try {
-		engine = new Rete();
-                         
+            	engine = new Rete();
                 engine.batch(rutas.Jess_path);
-                
                 engine.eval("(reset)");
-
                 engine.assertString("(currentPosition 100 100 100)");
-                engine.assertString("(health 30)");
+                engine.assertString("(health " + player.getArmor() + ")");
+                System.out.println("VIDA = " + player.getHealth());
                 engine.assertString("(armour 30)");
                 
                 engine.assertString("(healthLowLimit " + healthLowLimit + ")");
@@ -340,24 +361,24 @@ public final class MiBotseMueve extends ObserverBot
                 engine.assertString("(ammo 30 6 -1)");
                 engine.assertString("(wDistance 100 30 99)");
                 
-            
                 
                 engine.run();
-                count++;
 
                 res = engine.eval("?*ACTION*").intValue(null);
-                
+                System.out.println("res = " + res);
 
             } catch (JessException je) {
-                
+                System.out.println(je.toString());
             }
-            if (res == GET_LIFE) {
-                return this.findClosestItem(soc.qase.state.Inventory.HEALTH).getPosition().toOrigin();
+            if (res == GET_LIFE) {    
+                return this.findClosestItem(soc.qase.state.Inventory.ARMOR_SHARD).getPosition().toOrigin();               
+
             }
             else if (res == GET_ARMOUR) {
                 return this.findClosestItem(soc.qase.state.Inventory.ARMOR_SHARD).getPosition().toOrigin();
             }
             return null;
+
         }
         
 

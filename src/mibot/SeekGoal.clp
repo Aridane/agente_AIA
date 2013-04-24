@@ -1,51 +1,40 @@
 (defglobal
-    ?*ACTION* = 0)
+    ?*ACTION* = 0
+)
+
 (defrule r1
-    (health ?h&:(< ?h healthLowLimit))
+    (healthLowLimit ?lim)
+    ?id <- (health ?h&:(< ?h ?lim))
     =>
+    (printout t "Jess -> vida baja")
     (assert (healthLevel Low))
-    (retract health ?)
+    (retract ?id)
 )
 
 (defrule r2
-    (health ?h&:(< ?h healthHighLimit))
-    (health ?h&:(> ?h healthLowLimit))
+    (healthLowLimit ?lim)
+    (healthHighLimit ?limH)
+    (health ?h&:(< ?h ?lim))
+    ?id <- (health ?h&:(> ?h ?limH))
     =>
+    (printout t "Jess -> vida media")
     (assert (healthLevel Medium))
-    (retract health ?)
+    (retract ?id)
 )
 
 (defrule r3
-    (health ?h&:(< ?h healthHighLimit))
+    (healthHighLimit ?limH)
+    ?id <- (health ?h&:(> ?h ?limH))
     =>
+    (printout t "Jess -> vida alta")
     (assert (healthLevel High))
-    (retract health ?)
+    (retract ?id)
 )
 
-(defrule r4
-    (armour ?h&:(< ?h armourLowLimit))
-    =>
-    (assert (armourLevel Low))
-    (retract armour ?)
-)
 
-(defrule r5
-    (armour ?a&:(< ?a armourhHighLimit))
-    (armour ?a&:(> ?a armourLowLimit))
-    =>
-    (assert (armourLevel Medium))
-    (retract armour ?)
-)
-
-(defrule r6
-    (armour ?a&:(< ?h armourHighLimit))
-    =>
-    (assert (armourLevel High))
-    (retract armour ?)
-)
 
 (defrule r7
-    (health Low)
+    (healthLevel Low)
     =>
     (bind ?*ACTION* 1)
 )
