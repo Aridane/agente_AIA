@@ -183,7 +183,7 @@ public final class MiBotseMueve extends ObserverBot
         Entity enemy;
         
         int count = 0;
-                    boolean quieto = true;
+
         public void runAI(World w)
 	{
             if (mibsp==null) mibsp = new BSPParser(rutas.BSP_path);
@@ -296,45 +296,31 @@ public final class MiBotseMueve extends ObserverBot
                     actualWayPoint = 0;
                     goalPos = decideGoal(player);
                     System.out.println("decidio");
-                    if(goalPos == null) quieto = true;
-                    else
-                    {
-                        quieto = false;
-                        System.out.println("ORIGIN = " + player.getPosition().getX() + " " + player.getPosition().getY() + " " + player.getPosition().getZ());
-                        System.out.println("GOAL = " + goalPos.getX() + " " + goalPos.getY() + " " + goalPos.getZ());
-                        route = this.findShortestPath(goalPos);
-                        routeLength = route.length;
-                        System.out.println("length ruta " + routeLength);
-                    }
+
+                    System.out.println("ORIGIN = " + player.getPosition().getX() + " " + player.getPosition().getY() + " " + player.getPosition().getZ());
+                    System.out.println("GOAL = " + goalPos.getX() + " " + goalPos.getY() + " " + goalPos.getZ());
+                    route = this.findShortestPath(goalPos);
+                    if(route == null) routeLength = 0;
+                    else routeLength = route.length;
+                    System.out.println("length ruta " + routeLength);
                     goal = true;
                 }
-                
-                if(quieto)
-                {
-                    System.out.println("QUIETITO");
-                    arrived = makeMove(player.getPosition(),player.getPosition());
-                    System.out.println("arrived = " + arrived);
-                }
-                else
-                {
-                    //Obtener el siguiente wayPoint
-                    nextWayPoint.setX((int)route[actualWayPoint].getPosition().x);
-                    nextWayPoint.setY((int)route[actualWayPoint].getPosition().y);
-                    nextWayPoint.setZ((int)route[actualWayPoint].getPosition().z);             
-                
-                    System.out.println("SIG = " + nextWayPoint.getX() + " " + nextWayPoint.getY() + " "+ nextWayPoint.getZ());
-                
-                    arrived = makeMove(player.getPosition(),nextWayPoint);
-                }
-                
-                if(arrived==1) 
-                {
-                    if(!quieto)
+                    if(routeLength > 0)
                     {
-                        //System.out.println("LLEGO" + actualWayPoint + " " + routeLength);
-                        if(actualWayPoint < routeLength - 1) actualWayPoint++;
-                        else goal = false;
+                        //Obtener el siguiente wayPoint
+                        nextWayPoint.setX((int)route[actualWayPoint].getPosition().x);
+                        nextWayPoint.setY((int)route[actualWayPoint].getPosition().y);
+                        nextWayPoint.setZ((int)route[actualWayPoint].getPosition().z);             
+                
+                        System.out.println("SIG = " + nextWayPoint.getX() + " " + nextWayPoint.getY() + " "+ nextWayPoint.getZ());
+                
+                        arrived = makeMove(player.getPosition(),nextWayPoint);
                     }
+                
+                if((arrived==1)||(routeLength == 0))
+                {
+                    //System.out.println("LLEGO" + actualWayPoint + " " + routeLength);
+                    if(actualWayPoint < routeLength - 1) actualWayPoint++;
                     else goal = false;
                 }
             }
@@ -380,14 +366,12 @@ public final class MiBotseMueve extends ObserverBot
                 System.out.println(je.toString());
             }
             if (res == GET_LIFE) {    
-                System.out.println("DAME VIDA");
-                return this.findClosestItem(soc.qase.state.Inventory.ROCKET_LAUNCHER).getPosition().toOrigin();               
+                return this.findClosestItem(soc.qase.state.Inventory.ARMOR_SHARD).getPosition().toOrigin();               
             }
             else if (res == GET_ARMOUR) {
                 return this.findClosestItem(soc.qase.state.Inventory.ARMOR_SHARD).getPosition().toOrigin();
             }
-           // return this.findClosestItem(soc.qase.state.Inventory.ROCKET_LAUNCHER).getPosition().toOrigin();
-            return null;
+            return this.findClosestItem(soc.qase.state.Inventory.ROCKET_LAUNCHER).getPosition().toOrigin();
             
         }
         
