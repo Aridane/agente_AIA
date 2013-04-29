@@ -449,12 +449,7 @@ public final class MiBotseMueve extends ObserverBot
             }
             return FIGHT;
         }
-        
-
-        
-        
-       
-        
+ 
         
         private double evalGoal(GoalState state)
         {
