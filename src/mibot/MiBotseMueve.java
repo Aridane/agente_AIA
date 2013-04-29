@@ -401,7 +401,7 @@ public final class MiBotseMueve extends ObserverBot
             	- Segunda "mejor" arma
             	- municion de Segunda "mejor" arma
             	- Distancia al objetivo
-            	- Si el objetivo est� mirandonos o no
+            	- Si el objetivo esta mirandonos o no
             
         */
 
