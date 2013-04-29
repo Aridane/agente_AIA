@@ -45,7 +45,7 @@ public class MiBot {
 		MiBot.setMap(WaypointMapGenerator.generate(rutas.Map_path, (float)0.2)); //MiBot2.setMap(WaypointMapGenerator.generate("C:\\Users\\alvarin\\Desktop\\Dropbox\\Quinto\\AIA\\Quake\\quake2\\baseq2\\demos\\level.dm2", (float)0.2));
 		System.out.println("HOLA");
                 //Conecta con el localhost (el servidor debe estar ya lanzado para que se produzca la conexiÃ³n)
-		MiBot.connect("127.0.0.1",27910);//Ejemplo de conexiÃ³n a la mÃ¡quina local
+		MiBot.connect(getIpAddress(),27910);//Ejemplo de conexiÃ³n a la mÃ¡quina local
 
                 System.out.println("Connection State: ");
                 System.out.println(MiBot.isConnected());

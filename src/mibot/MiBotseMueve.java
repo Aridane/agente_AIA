@@ -390,6 +390,38 @@ public final class MiBotseMueve extends ObserverBot
         private int decideBattle()
         {
             return 0;
+            
+                        int res = -1;
+            try {
+            	engine = new Rete();
+                engine.batch(rutas.Jess_path);
+                engine.eval("(reset)");
+                engine.assertString("(currentPosition 100 100 100)");
+                engine.assertString("(health " + player.getArmor() + ")");
+                System.out.println("VIDA = " + player.getHealth());
+                engine.assertString("(armour 30)");
+                
+                engine.assertString("(healthLowLimit " + healthLowLimit + ")");
+                engine.assertString("(armourLowLimit " + armourLowLimit + ")");
+                engine.assertString("(healthHighLimit " + healthHighLimit + ")");
+                engine.assertString("(armourHighLimit " + armourHighLimit + ")");
+                
+                engine.assertString("(items Health BigHealth Armor BigArmor)");
+                engine.assertString("(itemsDistance 30 40 20 50)");
+                
+                engine.assertString("(weapons MG RL RG)");
+                engine.assertString("(ammo 30 6 -1)");
+                engine.assertString("(wDistance 100 30 99)");
+                
+                
+                engine.run();
+
+                res = engine.eval("?*ACTION*").intValue(null);
+                System.out.println("res = " + res);
+
+            } catch (JessException je) {
+                System.out.println(je.toString());
+            }
         }
        
 	/*-------------------------------------------------------------------*/
