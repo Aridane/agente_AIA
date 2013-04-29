@@ -26,7 +26,6 @@ import soc.qase.ai.waypoint.WaypointMapGenerator;
 
 
 
-
 //Cualquier bot debe extender a la clase ObserverBot, para hacer uso de sus funcionalidades
 public final class MiBotseMueve extends ObserverBot
 {
@@ -291,13 +290,20 @@ public final class MiBotseMueve extends ObserverBot
             
 
             aim.set(targetPos.getX()-player.getPosition().getX(), targetPos.getY()-player.getPosition().getY(), targetPos.getZ()-player.getPosition().getZ());
+            System.out.println("CHECKPOINT1.5");
             if(this.enemyVisible(player.getPosition(),mibsp, opponents, aim)!=null)
             {
-                //System.out.println("VISIBLE");
+
+                System.out.println("VISIBLE");
+                //Variable Enemy tiene la entidad
                 battleStrategy = decideBattle();
                 if(battleStrategy == FIGHT)
                 {
                     //Atacar
+                	Vector3f mov = new Vector3f(0,0,0);
+                	aim = new Vector3f(enemy.getOrigin().getX() - player.getPosition().getX(),enemy.getOrigin().getY() - player.getPosition().getY(),enemy.getOrigin().getZ() - player.getPosition().getZ());
+                    this.setBotMovement(mov, aim, 100, PlayerMove.POSTURE_NORMAL);
+                    setAction(Action.ATTACK, true);
                 }
                 if(battleStrategy == CHASE)
                 {
@@ -311,6 +317,9 @@ public final class MiBotseMueve extends ObserverBot
             //No hay enemigo visible
             else
             {
+
+            	System.out.println("CHECKPOINT2");
+                //System.out.println("ENEMIGO NO VISIBLE");
                 //Si ya se ha cumplido el objetivo o es el principio obtenemos uno nuevo
                 if(!goal)
                 {
@@ -401,12 +410,18 @@ public final class MiBotseMueve extends ObserverBot
             return null;
         }
         
+        private int valueOfWeapon(int weaponIndex) {
+        	if (weaponIndex == soc.qase.state.Inventory.HYPERBLASTER) return 100;
+        	else return 0;
+        }
+        
+        //Enemy tiene la entidad del enemigo
         private int decideBattle()
         {
                     /*
             Factores:
-            	- Vida actual
-            	- Armadura actual
+            	- Vida actual +
+            	- Armadura actual +
             	- Arma actual (Valoracion sobre ella)
             	- Municion actual
             	- Segunda "mejor" arma
@@ -415,21 +430,31 @@ public final class MiBotseMueve extends ObserverBot
             	- Si el objetivo esta mirandonos o no
             
         */
-
+        	
+        	/*AQUI ESTARIA BIEN QUE CAMBIARAMOS A NUESTRA MEJOR ARMA + MUNICION*/
             int res = -1;
             try {
             	engine = new Rete();
-                engine.batch(rutas.Jess_path);
+                engine.batch(rutas.Jess2_path);
                 engine.eval("(reset)");
                 engine.assertString("(currentPosition 100 100 100)");
-                engine.assertString("(health " + player.getArmor() + ")");
+                //Vida Actual
+                engine.assertString("(health " + player.getHealth() + ")");
                 System.out.println("VIDA = " + player.getHealth());
-                engine.assertString("(armour 30)");
-                
+                //Armadura Actual
+                engine.assertString("(armour "+player.getArmor()+")");
+                //Limites de Armadura y Vida
                 engine.assertString("(healthLowLimit " + healthLowLimit + ")");
                 engine.assertString("(armourLowLimit " + armorLowLimit + ")");
                 engine.assertString("(healthHighLimit " + healthHighLimit + ")");
+
                 engine.assertString("(armourHighLimit " + armorHighLimit + ")");
+                //Valor del arma actual
+                engine.assertString("(weapon "+valueOfWeapon(player.getWeaponIndex())+")");
+                
+                // Porcentaje de munición actual
+                engine.assertString("(ammo "+100*(player.getAmmo()/player.getPlayerGun().getMaxAmmo(player.getPlayerGun().getAmmoInventoryIndex()))+")");
+
                 
                 engine.assertString("(items Health BigHealth Armor BigArmor)");
                 engine.assertString("(itemsDistance 30 40 20 50)");
@@ -447,7 +472,7 @@ public final class MiBotseMueve extends ObserverBot
             } catch (JessException je) {
                 System.out.println(je.toString());
             }
-            return FIGHT;
+            return res;
         }
  
         
