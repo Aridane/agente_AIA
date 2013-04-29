@@ -185,10 +185,9 @@ public final class MiBotseMueve extends ObserverBot
         
         int count = 0;
 
-
-
         public void runAI(World w)
 	{
+        	System.out.println("...RUN AI...");
             //if (mibsp==null) mibsp = new BSPParser(rutas.BSP_path);
                     //"C:\\Users\\alvarin\\Desktop\\Dropbox\\Quinto\\AIA\\Qase\\q2dm1.bsp");
 
@@ -205,6 +204,7 @@ public final class MiBotseMueve extends ObserverBot
                 }*/
 
         /*    targetPos = new Origin();
+
 
             Vector3f mov = new Vector3f(0,0,0);
             Vector3f aim = new Vector3f(-1,0.0001,0.0001);
@@ -343,8 +343,8 @@ public final class MiBotseMueve extends ObserverBot
         {
             int res = -1;
             try {
-		engine = new Rete();
 
+            	engine = new Rete();
                 engine.batch(rutas.Jess_path);
                 engine.eval("(reset)");
                 engine.assertString("(currentPosition 100 100 100)");
@@ -375,11 +375,13 @@ public final class MiBotseMueve extends ObserverBot
             }
             if (res == GET_LIFE) {    
                 return this.findClosestItem(soc.qase.state.Inventory.ARMOR_SHARD).getPosition().toOrigin();               
+
             }
             else if (res == GET_ARMOUR) {
                 return this.findClosestItem(soc.qase.state.Inventory.ARMOR_SHARD).getPosition().toOrigin();
             }
-            return this.findClosestItem(soc.qase.state.Inventory.ROCKET_LAUNCHER).getPosition().toOrigin();
+            return null;
+
         }
         
 
@@ -390,7 +392,7 @@ public final class MiBotseMueve extends ObserverBot
         
         private int decideBattle()
         {
-        /*
+                    /*
             Factores:
             	- Vida actual
             	- Armadura actual
@@ -399,11 +401,47 @@ public final class MiBotseMueve extends ObserverBot
             	- Segunda "mejor" arma
             	- municion de Segunda "mejor" arma
             	- Distancia al objetivo
-            	- Si el objetivo est� mirandonos o no
+            	- Si el objetivo est� mirandonos o no
             
         */
-        	return FIGHT;
+
+            int res = -1;
+            try {
+            	engine = new Rete();
+                engine.batch(rutas.Jess_path);
+                engine.eval("(reset)");
+                engine.assertString("(currentPosition 100 100 100)");
+                engine.assertString("(health " + player.getArmor() + ")");
+                System.out.println("VIDA = " + player.getHealth());
+                engine.assertString("(armour 30)");
+                
+                engine.assertString("(healthLowLimit " + healthLowLimit + ")");
+                engine.assertString("(armourLowLimit " + armourLowLimit + ")");
+                engine.assertString("(healthHighLimit " + healthHighLimit + ")");
+                engine.assertString("(armourHighLimit " + armourHighLimit + ")");
+                
+                engine.assertString("(items Health BigHealth Armor BigArmor)");
+                engine.assertString("(itemsDistance 30 40 20 50)");
+                
+                engine.assertString("(weapons MG RL RG)");
+                engine.assertString("(ammo 30 6 -1)");
+                engine.assertString("(wDistance 100 30 99)");
+                
+                
+                engine.run();
+
+                res = engine.eval("?*ACTION*").intValue(null);
+                System.out.println("res = " + res);
+
+            } catch (JessException je) {
+                System.out.println(je.toString());
+            }
+            return FIGHT;
         }
+        
+
+        
+        
        
 	/*-------------------------------------------------------------------*/
 	/**	Rutina que configura la direcciÃ³n de avance en el movimiento.    */
