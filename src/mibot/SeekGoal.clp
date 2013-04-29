@@ -6,7 +6,6 @@
     (healthLowLimit ?lim)
     ?id <- (health ?h&:(< ?h ?lim))
     =>
-    (printout t "Jess -> vida baja")
     (assert (healthLevel Low))
     (retract ?id)
 )
@@ -17,7 +16,6 @@
     (health ?h&:(< ?h ?lim))
     ?id <- (health ?h&:(> ?h ?limH))
     =>
-    (printout t "Jess -> vida media")
     (assert (healthLevel Medium))
     (retract ?id)
 )
@@ -26,7 +24,6 @@
     (healthHighLimit ?limH)
     ?id <- (health ?h&:(> ?h ?limH))
     =>
-    (printout t "Jess -> vida alta")
     (assert (healthLevel High))
     (retract ?id)
 )
