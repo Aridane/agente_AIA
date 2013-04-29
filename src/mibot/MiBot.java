@@ -60,9 +60,11 @@ public class MiBot {
                 //MiBot2.connect("127.0.0.1",27910);//Ejemplo de conexiÃ³n a la mÃ¡quina local  
                 System.out.println("...");
 	}
-        public static String getIpAddress(){
+    
+    
+    public static String getIpAddress(){
         String res = "127.0.0.1";
-
+        if (OSValidator.isWindows()) return res;
         try{
 
             for(Enumeration ifaces = NetworkInterface.getNetworkInterfaces();ifaces.hasMoreElements();){
