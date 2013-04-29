@@ -11,6 +11,7 @@ import soc.qase.state.PlayerMove;
 import soc.qase.state.World;
 import soc.qase.tools.vecmath.Vector3f;
 import soc.qase.state.Inventory;
+import soc.qase.state.Entity;
 
 
 import soc.qase.state.*;
@@ -59,8 +60,8 @@ public final class MiBotseMueve extends ObserverBot
         private int healthLowLimit = 40;
 
         private int healthHighLimit = 80;
-        private int armourLowLimit = 30;
-        private int armourHighLimit = 80;
+        private int armorLowLimit = 30;
+        private int armorHighLimit = 80;
                
         
         int dire = 0;
@@ -187,23 +188,37 @@ public final class MiBotseMueve extends ObserverBot
 
         public void runAI(World w)
 	{
-        	System.out.println("...RUN AI...");
-            //if (mibsp==null) mibsp = new BSPParser(rutas.BSP_path);
+
+                 int[] winner = new int[3];
+                Origin o1 = new Origin(1,1,0);
+                Origin o2 = new Origin(1,2,0);
+                Origin o3 = new Origin(3,2,0);
+                Origin[] specimenAttributes = {o1,o2,o3};
+                Origin actualPos = new Origin(0,0,0);
+                
+           //     geneticAlgorithm(winner,specimenAttributes,actualPos,4,3);
+                System.out.println("winner = "+ winner[0] + " " + winner[1] + " " + winner[2]);           
+            //world.getEntities();
+            //System.out.println("entities = " );
+            if (mibsp==null) mibsp = new BSPParser(rutas.BSP_path);
+
                     //"C:\\Users\\alvarin\\Desktop\\Dropbox\\Quinto\\AIA\\Qase\\q2dm1.bsp");
 
             world = w;
             player = world.getPlayer();
             enemy = world.getOpponentByName("Player");
-            Vector opponents = world.getOpponents();
+            Vector opponents = world.getOpponents();;
 
                 /* if(hasRoute==0)
                 {
                     hasRoute = 1; 
                     route = findShortestPathToWeapon(null);
                     routeLength = route.length;
+
                 }*/
 
         /*    targetPos = new Origin();
+
 
 
             Vector3f mov = new Vector3f(0,0,0);
@@ -263,7 +278,6 @@ public final class MiBotseMueve extends ObserverBot
 
             }
             */
-
            
             //Código automata
            // System.out.println("AUTOMATA");
@@ -272,12 +286,14 @@ public final class MiBotseMueve extends ObserverBot
             targetPos = new Origin(0,0,0);
             nextWayPoint = new Origin(0,0,0);
             
-
+           // System.out.println("ACTUAL = " + player.getPosition().getX() + " " + player.getPosition().getY() + " "+ player.getPosition().getZ());
             
+            
+
             aim.set(targetPos.getX()-player.getPosition().getX(), targetPos.getY()-player.getPosition().getY(), targetPos.getZ()-player.getPosition().getZ());
             if(this.enemyVisible(player.getPosition(),mibsp, opponents, aim)!=null)
             {
-                System.out.println("VISIBLE");
+                //System.out.println("VISIBLE");
                 battleStrategy = decideBattle();
                 if(battleStrategy == FIGHT)
                 {
@@ -295,21 +311,18 @@ public final class MiBotseMueve extends ObserverBot
             //No hay enemigo visible
             else
             {
-                //System.out.println("ENEMIGO NO VISIBLE");
                 //Si ya se ha cumplido el objetivo o es el principio obtenemos uno nuevo
                 if(!goal)
                 {
-                    System.out.println("decide");
                     actualWayPoint = 0;
-                    goalPos = decideGoal(player);
-                    System.out.println("decidio");
+                    goalPos = decideGoal();
 
                     //System.out.println("ORIGIN = " + player.getPosition().getX() + " " + player.getPosition().getY() + " " + player.getPosition().getZ());
                     //System.out.println("GOAL = " + goalPos.getX() + " " + goalPos.getY() + " " + goalPos.getZ());
+
                     route = this.findShortestPath(goalPos);
                     if(route == null) routeLength = 0;
                     else routeLength = route.length;
-                    System.out.println("length ruta " + routeLength);
                     goal = true;
                 }
                     if(routeLength > 0)
@@ -339,7 +352,7 @@ public final class MiBotseMueve extends ObserverBot
         int GET_ARMOUR = 2;
              
         //Decide el objetivo a largo plazo
-        private Origin decideGoal(Player player)
+        private Origin decideGoal()
         {
             int res = -1;
             try {
@@ -347,16 +360,16 @@ public final class MiBotseMueve extends ObserverBot
             	engine = new Rete();
                 engine.batch(rutas.Jess_path);
                 engine.eval("(reset)");
-                engine.assertString("(currentPosition 100 100 100)");
-                engine.assertString("(health " + player.getArmor() + ")");
-                System.out.println("VIDA = " + player.getHealth());
-                engine.assertString("(armour 30)");
+                engine.assertString("(currentPosition " + player.getPosition().getX() + " " + player.getPosition().getY() + " " + player.getPosition().getZ() + ")");
+                engine.assertString("(health " + player.getHealth() + ")");
+
+                engine.assertString("(armor " + player.getArmor() +  ")");
                 
                 engine.assertString("(healthLowLimit " + healthLowLimit + ")");
-                engine.assertString("(armourLowLimit " + armourLowLimit + ")");
+                engine.assertString("(armorLowLimit " + armorLowLimit + ")");
                 engine.assertString("(healthHighLimit " + healthHighLimit + ")");
-                engine.assertString("(armourHighLimit " + armourHighLimit + ")");
-                
+                engine.assertString("(armorHighLimit " + armorHighLimit + ")");
+
                 engine.assertString("(items Health BigHealth Armor BigArmor)");
                 engine.assertString("(itemsDistance 30 40 20 50)");
                 
@@ -368,20 +381,18 @@ public final class MiBotseMueve extends ObserverBot
                 engine.run();
 
                 res = engine.eval("?*ACTION*").intValue(null);
-                System.out.println("res = " + res);
 
             } catch (JessException je) {
                 System.out.println(je.toString());
             }
+           
             if (res == GET_LIFE) {    
-                return this.findClosestItem(soc.qase.state.Inventory.ARMOR_SHARD).getPosition().toOrigin();               
-
+                return new Origin(1900, 1240, 1048); //Vida que obtuve manualmente         
             }
             else if (res == GET_ARMOUR) {
-                return this.findClosestItem(soc.qase.state.Inventory.ARMOR_SHARD).getPosition().toOrigin();
+                return this.findClosestItem(Inventory.ARMOR_SHARD).getPosition().toOrigin();
             }
-            return null;
-
+            return this.findClosestItem(Inventory.JACKET_ARMOR).getPosition().toOrigin();
         }
         
 
@@ -416,9 +427,9 @@ public final class MiBotseMueve extends ObserverBot
                 engine.assertString("(armour 30)");
                 
                 engine.assertString("(healthLowLimit " + healthLowLimit + ")");
-                engine.assertString("(armourLowLimit " + armourLowLimit + ")");
+                engine.assertString("(armourLowLimit " + armorLowLimit + ")");
                 engine.assertString("(healthHighLimit " + healthHighLimit + ")");
-                engine.assertString("(armourHighLimit " + armourHighLimit + ")");
+                engine.assertString("(armourHighLimit " + armorHighLimit + ")");
                 
                 engine.assertString("(items Health BigHealth Armor BigArmor)");
                 engine.assertString("(itemsDistance 30 40 20 50)");
@@ -443,6 +454,391 @@ public final class MiBotseMueve extends ObserverBot
         
         
        
+        
+        
+        private double evalGoal(GoalState state)
+        {
+            double factorHealth = state.health - player.getHealth();
+            double factorHealthDistance;
+            double factorDistance = this.euclideanDistance(state.position,player.getPosition());
+            double factorArmor = player.getArmor();
+            double factorArmorDistance;
+            double factorAmmo;
+            double factorAmmoDistance;
+            boolean haveHyper = this.hasItem(Inventory.HYPERBLASTER);
+            double factorHyperDistance;
+            if(haveHyper) factorAmmo = state.ammo - player.getAmmo();
+            else factorAmmo = 0;
+            Waypoint healthWay = this.findClosestItem(Inventory.HEALTH);
+            Waypoint armorWay = this.findClosestItem(Inventory.ARMOR_SHARD);
+            Waypoint hyperWay = this.findClosestItem(Inventory.HYPERBLASTER);
+            Waypoint ammoWay = this.findClosestItem(Inventory.CELLS);
+            if(healthWay != null)
+            {
+                factorHealthDistance = state.healthDistance-this.euclideanDistance(player.getPosition(),healthWay.getPosition().toOrigin());
+            }
+            else factorHealthDistance = 0;
+            
+            if(armorWay != null)
+            {
+                factorArmorDistance = state.armorDistance-this.euclideanDistance(player.getPosition(),armorWay.getPosition().toOrigin());
+            }
+            else factorArmorDistance = 0;
+            
+            if(ammoWay != null)
+            {
+                factorAmmoDistance = state.ammoDistance-this.euclideanDistance(player.getPosition(),ammoWay.getPosition().toOrigin());
+            }
+            else factorAmmoDistance = 0;
+            if(hyperWay != null)
+            {
+                factorHyperDistance = state.hyperDistance-this.euclideanDistance(player.getPosition(),hyperWay.getPosition().toOrigin());
+            }
+            else factorHyperDistance = 0;
+            return 1;
+
+        }
+        
+        private double euclideanDistance(Origin o1,Origin o2)
+        {
+            return Math.sqrt((o1.getX()-o2.getX())*(o1.getX()-o2.getX())+(o1.getY()-o2.getY())*(o1.getY()-o2.getY())+(o1.getZ()-o2.getZ())*(o1.getZ()-o2.getZ()));
+        }
+        
+        ///////////////////////////////////////
+        //Funciones para el algoritmo genetico
+        //////////////////////////////////////
+        private void geneticAlgorithm(int[] evolutionWinner,Origin[] specimenAttributes,Origin actualPos,int population,int nAttributes)
+        {
+            System.out.println("EMPIEZA ALGORITMO GENETICO");
+            int iterations = 0;
+            double[] fitness = new double[population];
+            double[] reproductionRate = new double[population];
+            int[][] specimenSet = new int[population][nAttributes];
+            int[][] offsprings = new int[population][nAttributes];
+            double max = 100000;
+            double[] info = new double[2];
+            getInitialSpecimenSet(specimenSet,nAttributes);
+            System.out.println("specimenSet Inicial");
+            for(int i=0;i<population;i++)
+            {
+                System.out.println(specimenSet[i][0] + " " + specimenSet[i][1] + " " + specimenSet[i][2]);
+            }
+            evalSpecimenSet(fitness,specimenSet,population,actualPos,specimenAttributes,nAttributes); 
+            System.out.println("fitness Inicial");
+            for(int i=0;i<population;i++)
+            {
+                System.out.println(fitness[i]);
+            }
+            while((max(fitness)[0] != max) && (iterations < 1))
+            {
+                info = max(fitness);
+                System.out.println("max = " + info[0]);
+                max = info[0];
+                getNaturalSelection(reproductionRate,fitness);
+                System.out.println("reproduction Rate");
+                for(int i=0;i<population;i++)
+                {
+                    System.out.println(reproductionRate[i]);;
+                }
+                reproduceSpecimenSet(offsprings,specimenSet,reproductionRate);
+                System.out.println("descendientes");
+                for(int i=0;i<population;i++)
+                {
+                    System.out.println(offsprings[i][0] + " " + offsprings[i][1] + " " + offsprings[i][2]);
+                }                
+                //mutateSpecimens(offsprings);
+                evalSpecimenSet(fitness,offsprings,population,actualPos,specimenAttributes,nAttributes);
+                noCountryForAllMen(specimenSet,offsprings);
+                iterations++;
+            }
+            evolutionWinner = specimenSet[(int)info[1]];
+        }
+        
+        
+        private void getInitialSpecimenSet(int[][] specimenSet,int nAttributes)
+        {
+            int count;
+            int element;
+            boolean first;
+            int[] specimen = new int[specimenSet[0].length];
+            for(int i=0;i<specimenSet.length;i++)
+            {
+                first = true;
+                while((first==true) || equalSpecimen(specimenSet,specimen))
+                {
+                    first = false;
+                    count = 0;
+                    for(int j=0;j<nAttributes;j++)
+                    {
+                        element = getElementNotDuplicate(specimen,count,nAttributes);
+                        specimen[j] = element;
+                        count++;
+                    }
+                }
+                for(int j=0;j<nAttributes;j++)
+                {
+                    specimenSet[i][j] = specimen[j];
+                }
+                System.out.println("espec aceptado" + specimenSet[i][0] + " " + specimenSet[i][1] + " " + specimenSet[i][2] + " ");
+            }
+        }
+        
+        private boolean  equalSpecimen(int[][] specimenSet,int[] specimen)
+        {
+
+           // System.out.println("espec to compare" + specimen[0] + " " + specimen[1] + " " + specimen[2] + " ");
+            boolean distinto;   
+            for(int i=0;i<specimenSet.length;i++)
+            {
+                distinto = false;
+                for(int j=0;j<specimenSet[0].length;j++)
+                {
+                    if(specimenSet[i][j] != specimen[j]) distinto = true;
+                }
+                if(distinto == false) return true;
+            }
+            System.out.println("UNO NUEVO!!!!");
+            return false;
+        }
+        
+        private int getElementNotDuplicate(int[] vector,int count,int nAttributes)
+        {
+            int random = (int)((Math.random() * 100)%(nAttributes-1));
+            while(isInVector(random,vector,count))
+            {
+                random = (int)((Math.random() * 100)%nAttributes);
+                //System.out.println("random = " + random);
+            }
+            return random;
+        }
+        
+        
+        private boolean isInVector(int number,int[] vector,int count)
+        {
+            for(int i=0;i<count;i++)
+            {
+                if(number == vector[i]) return true;
+            }
+            return false;
+        }
+        
+        private void evalSpecimenSet(double[] fitness,int[][] specimenSet,int population,Origin actualPos,Origin[] specimenAttributes,int nAttributes)
+        {
+            for(int i=0;i<population;i++)
+            {
+                fitness[i] = evalSpecimen(specimenSet[i],actualPos,specimenAttributes,nAttributes);
+            }
+        }
+        
+        private double evalSpecimen(int[] specimen,Origin actualPos,Origin[] specimenAttributes,int nAttributes)
+        {
+            double distance = euclideanDistance(actualPos,specimenAttributes[specimen[0]]);
+            for(int i=0;i<nAttributes;i++)
+            {
+                if(i+1<nAttributes) distance = distance + euclideanDistance(specimenAttributes[specimen[i]],specimenAttributes[specimen[i+1]]);
+            }
+            return distance;
+        }
+        
+        
+        private double[] max(double[] vector)
+        {
+            double max = 100000;
+            int index = 0;
+            for(int i=0;i<vector.length;i++)
+            {
+                if(vector[i] < max)
+                {
+                    max = vector[i];
+                    index = i;
+                }
+            }
+            double[] res = {max,index};
+            return res;
+        }
+        
+        private void getNaturalSelection(double[] reproductionRate,double[] fitness)
+        {
+            double fitnessSum = sum(fitness);
+            double[] inverseFitness = new double[fitness.length];
+            asignInverseValues(inverseFitness,fitness,fitnessSum);
+            double inverseFitnessSum = sum(inverseFitness);
+            for(int i=0;i<reproductionRate.length;i++)
+            {
+                reproductionRate[i] = inverseFitness[i]/inverseFitnessSum;
+            }
+        }
+        
+        private double sum(double[] fitness)
+        {
+            double acum = 0;
+            for(int i=0;i<fitness.length;i++)
+            {
+                acum = acum + fitness[i];
+            }
+            return acum;
+        }
+        
+        private void asignInverseValues(double[] inverseFitness,double[] fitness,double fitnessSum)
+        {
+            for(int i=0;i<inverseFitness.length;i++)
+            {
+                inverseFitness[i] = fitnessSum - fitness[i];
+            }
+        }
+        
+        
+        private void reproduceSpecimenSet(int[][] offspringSet,int[][] specimenSet,double[] reproductionRate)
+        {
+            int[] male = new int[specimenSet[0].length];
+            int[] female = new int[specimenSet[0].length];
+            int[][] children = new int[2][specimenSet[0].length];
+            int[][] combinations = new int[specimenSet.length][2];
+            int countCombs = 0;
+            double rateGen;
+            for(int i=0;i<specimenSet.length;i+=2)
+            {
+                rateGen = getSpecimensToProcreate(male,female,specimenSet,reproductionRate,combinations,countCombs);
+                System.out.println("rateGen " + rateGen);
+                reproduceSpecimens(children,male,female,rateGen);
+                System.out.println("children " + children[0][0] + " " + children[0][1] + " " + children[0][2]);
+                System.out.println("children " + children[1][0] + " " + children[1][1] + " " + children[1][2]);
+                offspringSet[i] = children[0];
+                offspringSet[i+1] = children[1];
+            }          
+        }
+        
+        private double getSpecimensToProcreate(int[] male,int[] female,int[][] specimenSet,double[] reproductionRate,int[][] combinations,int countCombs)
+        {
+            double[] acumRate = new double[reproductionRate.length];
+            double acum = 0;
+            int indexMale = 0;
+            int indexFemale = 0;
+            boolean first = true;
+            System.out.println("getspecimenstoprocreate");
+            for(int i=0;i<acumRate.length;i++)
+            {
+                acumRate[i] = acum + reproductionRate[i];
+                acum = acumRate[i];
+            }
+            System.out.println("acumrate");
+            for(int i=0;i<acumRate.length;i++)
+            {
+                System.out.println(acumRate[i]);
+            }
+            while((first == true) || usedCombination(indexMale,indexFemale,combinations,countCombs))
+            {
+                first = false;
+                indexMale = getOneSpecimen(acumRate);
+                indexFemale = getOneSpecimen(acumRate);
+            }
+            for(int i=0;i<male.length;i++) 
+            {
+                male[i] = specimenSet[indexMale][i];
+                female[i] = specimenSet[indexFemale][i];
+            }
+            
+        System.out.println("male " + male[0] + " " + male[1] + " " + male[2]);
+          System.out.println("female " + female[0] + " " + female[1] + " " + female[2]);
+            combinations[countCombs][0] = indexMale;
+            combinations[countCombs][1] = indexFemale;
+            return reproductionRate[indexMale]/(reproductionRate[indexMale]+reproductionRate[indexFemale]);
+        }
+        
+        
+        private boolean usedCombination(int indexMale,int indexFemale,int[][] combinations,int countCombs)
+        {
+            for(int i=0;i<countCombs;i++)
+            {
+                if((combinations[i][0] == indexMale) && (combinations[i][1] == indexFemale) || (combinations[i][1] == indexMale) && (combinations[i][0] == indexFemale))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        private int getOneSpecimen(double[] acumRate)
+        {
+            double random = Math.random();
+            for(int i=0;i<acumRate.length;i++)
+            {
+                if(random < acumRate[i])
+                {
+                    return i;
+                }
+            }
+            return 0;
+        }
+        
+        private void reproduceSpecimens(int[][] children,int[] male,int[] female,double rateGen)
+        {
+            System.out.println("reproduce specimens");
+            int indexPartGen = (int)Math.floor(rateGen*male.length);
+                    System.out.println("male " + male[0] + " " + male[1] + " " + male[2]);
+          System.out.println("female " + female[0] + " " + female[1] + " " + female[2]);
+            System.out.println("indexpartgen " + indexPartGen);
+            for(int i=0;i<indexPartGen;i++)
+            {
+                children[0][i] = male[i];
+            }
+            for(int i=indexPartGen;i<male.length;i++)
+            {
+                children[0][i] = female[i];
+            }
+                            System.out.println("children " + children[0][0] + " " + children[0][1] + " " + children[0][2]);
+                System.out.println("children " + children[1][0] + " " + children[1][1] + " " + children[1][2]);
+            changeDuplicateAttributes(children[0],male,female,indexPartGen);
+            indexPartGen =  male.length - indexPartGen;
+            for(int i=0;i<indexPartGen;i++)
+            {
+                children[0][i] = female[i];
+            }
+            for(int i=indexPartGen;i<male.length;i++)
+            {
+                children[0][i] = male[i];
+            }            
+            changeDuplicateAttributes(children[1],female,male,indexPartGen);
+        }
+        
+        private void changeDuplicateAttributes(int[] children,int[] male,int[] female,int index)
+        {
+            int duplicate;
+            while((duplicate = getDuplicate(children)) != -1)
+            {
+                children[duplicate] = getElementNotEqual(children[duplicate],male,index);
+            }
+        }
+        
+        private int getDuplicate(int[] vector)
+        {
+            for(int i=0;i<vector.length;i++)
+            {
+                for(int j=0;j<vector.length;j++)
+                {
+                    if((i!=j) && (vector[i] == vector[j])) return i;
+                }
+            }
+            return -1;
+        }
+        
+        private int getElementNotEqual(int element,int[] male,int index)
+        {
+            for(int i=0;i<index;i++)
+            {
+                if(element != male[i]) return male[i];
+            }
+            return -1;
+        }
+        
+        private void noCountryForAllMen(int[][] specimenSet,int[][] offsprings)
+        {
+            for(int i=0;i<specimenSet.length;i++)
+            {
+                specimenSet[i] = offsprings[i];
+            }
+        }
+        
 	/*-------------------------------------------------------------------*/
 	/**	Rutina que configura la direcciÃ³n de avance en el movimiento.    */
 	/**	BÃ¡sicamente, si detecta que el bot no avanza durante un tiempo   */
