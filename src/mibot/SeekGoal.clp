@@ -1,3 +1,4 @@
+
 (defglobal
     ?*ACTION* = 0
 )
@@ -35,4 +36,5 @@
     =>
     (bind ?*ACTION* 1)
 )
+
 
