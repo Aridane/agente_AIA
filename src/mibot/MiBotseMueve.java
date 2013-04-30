@@ -188,13 +188,14 @@ public final class MiBotseMueve extends ObserverBot
         public void runAI(World w)
 	{
                  int[] winner = new int[3];
-                Origin o1 = new Origin(1,1,0);
-                Origin o2 = new Origin(1,2,0);
-                Origin o3 = new Origin(3,2,0);
-                Origin[] specimenAttributes = {o1,o2,o3};
+                Origin o1 = new Origin(5,2,0);
+                Origin o2 = new Origin(3,4,0);
+                Origin o3 = new Origin(1,1,0);
+                Origin o4 = new Origin(1,4,0);
+                Origin[] specimenAttributes = {o1,o2,o3,o4};
                 Origin actualPos = new Origin(0,0,0);
                 
-           //     geneticAlgorithm(winner,specimenAttributes,actualPos,4,3);
+                //geneticAlgorithm(winner,specimenAttributes,actualPos,10,4);
                 System.out.println("winner = "+ winner[0] + " " + winner[1] + " " + winner[2]);           
             //world.getEntities();
             //System.out.println("entities = " );
@@ -203,7 +204,7 @@ public final class MiBotseMueve extends ObserverBot
 
             world = w;
             player = world.getPlayer();
-            enemy = world.getOpponentByName("Player");
+            enemy = world.getOpponentByName("KillBot0");
             Vector opponents = world.getOpponents();
                 /* if(hasRoute==0)
                 {
@@ -211,7 +212,7 @@ public final class MiBotseMueve extends ObserverBot
                     route = findShortestPathToWeapon(null);
                     routeLength = route.length;
                 }*/
-            /*targetPos = new Origin();
+            targetPos = new Origin();
  
             Vector3f mov = new Vector3f(0,0,0);
             Vector3f aim = new Vector3f(-1,0.0001,0.0001);
@@ -267,8 +268,8 @@ public final class MiBotseMueve extends ObserverBot
                     // this.setBotMovement(mov, aim, 100, PlayerMove.POSTURE_NORMAL);
                     setAction(Action.ATTACK, false);
                 }
-            }*/
-            
+            }
+            /*
            
             //Código automata
            // System.out.println("AUTOMATA");
@@ -331,7 +332,7 @@ public final class MiBotseMueve extends ObserverBot
                     if(actualWayPoint < routeLength - 1) actualWayPoint++;
                     else goal = false;
                 }
-            }
+            }*/
 
         }
         
@@ -461,7 +462,7 @@ public final class MiBotseMueve extends ObserverBot
             System.out.println("specimenSet Inicial");
             for(int i=0;i<population;i++)
             {
-                System.out.println(specimenSet[i][0] + " " + specimenSet[i][1] + " " + specimenSet[i][2]);
+                System.out.println(specimenSet[i][0] + " " + specimenSet[i][1] + " " + specimenSet[i][2] + " " + specimenSet[i][3]);
             }
             evalSpecimenSet(fitness,specimenSet,population,actualPos,specimenAttributes,nAttributes); 
             System.out.println("fitness Inicial");
@@ -577,7 +578,7 @@ public final class MiBotseMueve extends ObserverBot
             {
                 if(i+1<nAttributes) distance = distance + euclideanDistance(specimenAttributes[specimen[i]],specimenAttributes[specimen[i+1]]);
             }
-            return distance;
+            return 100000/Math.pow(distance,5);
         }
         
         
@@ -600,12 +601,13 @@ public final class MiBotseMueve extends ObserverBot
         private void getNaturalSelection(double[] reproductionRate,double[] fitness)
         {
             double fitnessSum = sum(fitness);
-            double[] inverseFitness = new double[fitness.length];
+            /*double[] inverseFitness = new double[fitness.length];
             asignInverseValues(inverseFitness,fitness,fitnessSum);
-            double inverseFitnessSum = sum(inverseFitness);
+            double inverseFitnessSum = sum(inverseFitness);*/
             for(int i=0;i<reproductionRate.length;i++)
             {
-                reproductionRate[i] = inverseFitness[i]/inverseFitnessSum;
+                //reproductionRate[i] = inverseFitness[i]/inverseFitnessSum;
+                reproductionRate[i] = fitness[i]/fitnessSum;
             }
         }
         
@@ -669,8 +671,9 @@ public final class MiBotseMueve extends ObserverBot
             while((first == true) || usedCombination(indexMale,indexFemale,combinations,countCombs))
             {
                 first = false;
-                indexMale = getOneSpecimen(acumRate);
-                indexFemale = getOneSpecimen(acumRate);
+                int[] indexes = getTwoSpecimen(acumRate);
+                indexMale = indexes[0];
+                indexFemale = indexes[1];
             }
             for(int i=0;i<male.length;i++) 
             {
@@ -698,17 +701,34 @@ public final class MiBotseMueve extends ObserverBot
             return false;
         }
         
-        private int getOneSpecimen(double[] acumRate)
+        private int[] getTwoSpecimen(double[] acumRate)
         {
-            double random = Math.random();
-            for(int i=0;i<acumRate.length;i++)
+            double random_1;
+            double random_2;
+            int index_1 = 0;
+            int index_2 = 1;
+            while(index_1 == index_2)
             {
-                if(random < acumRate[i])
+                random_1 = Math.random();
+                random_2 = Math.random();
+                for(int i=0;i<acumRate.length;i++)
                 {
-                    return i;
+                    if(i > 0)
+                    {
+                        if((random_1 > acumRate[i-1]) && (random_1 <= acumRate[i]))
+                        {
+                            index_1 = i;
+                        }
+                        if((random_2 > acumRate[i-1]) && (random_2 <= acumRate[i]))
+                        {
+                            index_2 = i;
+                        }
+                                
+                    }
                 }
-            }
-            return 0;
+            }        
+            return null;
+//            return res;
         }
         
         private void reproduceSpecimens(int[][] children,int[] male,int[] female,double rateGen)
@@ -719,31 +739,36 @@ public final class MiBotseMueve extends ObserverBot
           System.out.println("female " + female[0] + " " + female[1] + " " + female[2]);
             System.out.println("indexpartgen " + indexPartGen);
             for(int i=0;i<indexPartGen;i++)
-            {
+            {               
                 children[0][i] = male[i];
+                count++;
             }
             for(int i=indexPartGen;i<male.length;i++)
             {
                 children[0][i] = female[i];
             }
-                            System.out.println("children " + children[0][0] + " " + children[0][1] + " " + children[0][2]);
-                System.out.println("children " + children[1][0] + " " + children[1][1] + " " + children[1][2]);
+                            System.out.println("children primero " + children[0][0] + " " + children[0][1] + " " + children[0][2]);
             changeDuplicateAttributes(children[0],male,female,indexPartGen);
+            System.out.println("children primero sin duplis " + children[0][0] + " " + children[0][1] + " " + children[0][2]);
             indexPartGen =  male.length - indexPartGen;
+            System.out.println("indexpartgen " + indexPartGen);
             for(int i=0;i<indexPartGen;i++)
             {
-                children[0][i] = female[i];
+                children[1][i] = female[i];
             }
             for(int i=indexPartGen;i<male.length;i++)
             {
-                children[0][i] = male[i];
+                children[1][i] = male[i];
             }            
+                            System.out.println("children segundo " + children[1][0] + " " + children[1][1] + " " + children[1][2]);
             changeDuplicateAttributes(children[1],female,male,indexPartGen);
+            System.out.println("children segundo sin duplis " + children[1][0] + " " + children[1][1] + " " + children[1][2]);
         }
         
         private void changeDuplicateAttributes(int[] children,int[] male,int[] female,int index)
         {
             int duplicate;
+            System.out.println("duplicado = " + getDuplicate(children));
             while((duplicate = getDuplicate(children)) != -1)
             {
                 children[duplicate] = getElementNotEqual(children[duplicate],male,index);
