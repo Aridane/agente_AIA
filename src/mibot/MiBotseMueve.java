@@ -523,8 +523,9 @@ public final class MiBotseMueve extends ObserverBot
     	//accuracy -> 0 - 10
     	int damageCDAccuracyHeuristic(int directDamage, int CD, int accuracy){
     		float accuracyFactor = 10*accuracy;
-    		float CDFactor = 100*(CD+0.01)/24;
+    		float CDFactor = (float) (100.0*(CD+0.01)/24.0);
     		float damageFactor = 0;
+
     		return 0;
     	}
     		
