@@ -49,6 +49,23 @@ public final class MiBotseMueve extends ObserverBot
 	// Distancia al enemigo que estamos atacando
 	private float distanciaEnemigo = Float.MAX_VALUE;
 	
+	final int BLASTER = 7, SHOTGUN = 8, SUPER_SHOTGUN = 9,
+			MACHINEGUN = 10, CHAINGUN = 11, GRENADES = 12, GRENADE_LAUNCHER = 13,
+			ROCKET_LAUNCHER = 14, HYPERBLASTER = 15, RAILGUN = 16, BFG10K = 17,
+			SHELLS = 18, BULLETS = 19, CELLS = 20, ROCKETS = 21, SLUGS = 22;
+	//Para consultar se accede con (arma - 7);
+	final int[] WEAPON_CDS = { 4, 11, 11, 0, 0, 13, 11, 8, 0, 15, 24 };
+	//Hay que tener en cuenta que la escopeta lanza 12 balas
+	final int[] WEAPON_DAMAGE = {15, 4, 6, 8, 6, 0, 120, 100, 15, 100, 200};
+	//Weapon accuracy
+	int[] WEAPON_ACCURACY = {1,1,1,1,1,1,1,1,1,1,1};
+	//en Filas -> arma-7
+	//en Columnas 0 -> índice de tipo de munición
+	//en Columnas 1 -> munición por recogida
+	//en Columnas 2 -> munición máxima
+	
+	int [][] weaponsIndex = new int[11][3];
+	
 	// Motor de inferencia
 	private Rete engine;
         //Spawn, SeekItem, Battle_Chase, Battle_Retreat, Battle_Engage
@@ -148,7 +165,19 @@ public final class MiBotseMueve extends ObserverBot
 	{		
 		//Autorefresco del inventario
 		this.setAutoInventoryRefresh(true);
-
+		// 0 = associated ammo inventory index, 1 = ammo per pickup, 2 = max ammo
+		//Además los indices de 0/10 son armas
+		weaponsIndex[0][0] = -1;	weaponsIndex[0][1] = -1;	weaponsIndex[0][2] = -1;
+		weaponsIndex[1][0] = 18;	weaponsIndex[1][1] = 10;	weaponsIndex[1][2] = 100;
+		weaponsIndex[2][0] = 18;	weaponsIndex[2][1] = 10;	weaponsIndex[2][2] = 100;
+		weaponsIndex[3][0] = 19;	weaponsIndex[3][1] = 50;	weaponsIndex[3][2] = 200;
+		weaponsIndex[4][0] = 19;	weaponsIndex[4][1] = 50;	weaponsIndex[4][2] = 200;
+		weaponsIndex[5][0] = 12;	weaponsIndex[5][1] = 5;		weaponsIndex[5][2] = 50;
+		weaponsIndex[6][0] = 12;	weaponsIndex[6][1] = 5;		weaponsIndex[6][2] = 50;
+		weaponsIndex[7][0] = 21;	weaponsIndex[7][1] = 5;		weaponsIndex[7][2] = 50;
+		weaponsIndex[8][0] = 20;	weaponsIndex[8][1] = 50;	weaponsIndex[8][2] = 200;
+		weaponsIndex[9][0] = 22;	weaponsIndex[9][1] = 10;	weaponsIndex[9][2] = 50;
+		weaponsIndex[10][0] = 20;	weaponsIndex[10][1] = 50;	weaponsIndex[10][2] = 200;
 	}
 
         //Distintos valores que puede dar decideBattle()
@@ -423,6 +452,190 @@ public final class MiBotseMueve extends ObserverBot
         	else return 0;
         }
         
+    	private int getWeaponStats(String name, int maxAmmo, int directDamage, int accuracy, int CD)
+    	{
+    		PlayerGun gun = new PlayerGun();
+    		int res = 0;
+    		if (name.equals("weapon_blaster")){
+    			res = 7;
+    		}
+    		if (name.equals("weapon_shotgun")){
+    			res = 8;
+    		}
+    		if (name.equals("weapon_supershotgun")){
+    			res = 9;
+    		}
+    		if (name.equals("weapon_machinegun")){
+    			res = 10;
+    		}
+    		if (name.equals("weapon_chaingun")){
+    			res = 11;
+    		}
+    		if (name.equals("weapon_grenades")){
+    			res = 12;
+    		}
+    		if (name.equals("weapon_grenadelauncher")){
+    			res = 13;
+    		}
+    		if (name.equals("weapon_rocketlauncher")){
+    			res = 14;
+    		}
+    		if (name.equals("weapon_hyperblaster")){
+    			res = 15;
+    		}
+    		if (name.equals("weapon_railgun")){
+    			res = 16;
+    		}
+    		if (name.equals("weapon_bfg")){
+    			res = 17;
+    		}
+			CD = WEAPON_CDS[res-7];
+			maxAmmo = weaponsIndex[res-7][2];
+			directDamage = WEAPON_DAMAGE[res-7];
+			accuracy = WEAPON_ACCURACY[res-7];
+    		return res;
+    	}
+    	
+    	private int max(int [] vector){
+    		int max = 0;
+    		for(int i=0;i<vector.length;i++){
+    			if (vector[i] > max) max = vector[i];
+    		}
+    		return max;
+    	}
+    	int damageLowLimit = 15;
+    	int damageHighLimit = 100;
+    	
+    	int accuracyLowLimit = 3;
+    	int accuracyHighLimit = 7;
+    	//final int[] WEAPON_CDS = { 4, 11, 11, 0, 0, 13, 11, 8, 0, 15, 24 };
+    	int CDLowLimit = 2;
+    	int CDHighLimit = 7;
+    	
+    	int enemyDistanceLowLimit = 500;
+    	int enemyDistanceHighLimit = 1000;
+    	
+    	int ammoLowLimit = 40;
+    	int ammoHighLimit = 70;
+    	
+    	//DMG -> 0 - 200
+    	//CD -> 0 - 24
+    	//accuracy -> 0 - 10
+    	int damageCDAccuracyHeuristic(int directDamage, int CD, int accuracy){
+    		return 0;
+    	}
+    		
+    	int accuracyEnemyDistanceHeuristic(int directDamage, int CD, int accuracy){
+    		return 0;
+    	}
+    	private int getFuzzyValue(int weaponIndex,int maxAmmo, int directDamage, int accuracy, int CD, int enemyDistance){
+    		int res = -1;
+    		int actualAmmo = 100*this.getInventoryItemCount(weaponsIndex[weaponIndex-7][0])/maxAmmo;
+    		
+            try {
+            	engine = new Rete();
+                engine.batch(rutas.Jess2_path);
+                engine.eval("(reset)");
+                
+                
+                
+                int DCDA = damageCDAccuracyHeuristic(directDamage, CD, accuracy);
+                int AEd = accuracyEnemyDistanceHeuristic(directDamage, CD, accuracy);
+                
+                
+                engine.assertString("(weaponID "+weaponIndex+")");
+                if (directDamage < damageLowLimit) engine.assertString("(damage LOW)");
+                else if (directDamage < damageHighLimit) engine.assertString("(damage MED)");
+                else if (directDamage > damageHighLimit) engine.assertString("(damage HIGH)");
+                
+                if (CD < CDLowLimit) engine.assertString("(CD LOW)");
+                else if (CD < CDHighLimit) engine.assertString("(CD MED)");
+                else if (CD > CDHighLimit) engine.assertString("(CD HIGH)");
+                
+                if (accuracy < accuracyLowLimit) engine.assertString("(accuracy LOW)");
+                else if (accuracy < accuracyHighLimit) engine.assertString("(accuracy MED)");
+                else if (accuracy > accuracyHighLimit) engine.assertString("(accuracy HIGH)");
+                
+                if (enemyDistance < enemyDistanceLowLimit) engine.assertString("(enemyDistance LOW)");
+                else if (enemyDistance < enemyDistanceHighLimit) engine.assertString("(enemyDistance MED)");
+                else if (enemyDistance > enemyDistanceHighLimit) engine.assertString("(enemyDistance HIGH)");
+                
+                if (actualAmmo < ammoLowLimit) engine.assertString("(ammo LOW)");
+                else if (actualAmmo < ammoHighLimit) engine.assertString("(ammo MED)");
+                else if (actualAmmo > ammoHighLimit) engine.assertString("(ammo HIGH)");
+                
+                // Porcentaje de municiï¿½n actual
+                engine.assertString("(ammo "+100*(this.getInventoryItemCount(weaponsIndex[weaponIndex-7][0])/maxAmmo)+")");
+                engine.run();
+
+                res = engine.eval("?*ACTION*").intValue(null);
+                System.out.println("res = " + res);
+
+            } catch (JessException je) {
+                System.out.println(je.toString());
+            }
+    		
+    		/*BLASTER = 7, SHOTGUN = 8, SUPER_SHOTGUN = 9,
+    				MACHINEGUN = 10, CHAINGUN = 11, GRENADES = 12, GRENADE_LAUNCHER = 13,
+    				ROCKET_LAUNCHER = 14, HYPERBLASTER = 15, RAILGUN = 16, BFG10K = 17,
+    				
+    				
+    				
+    				SHELLS = 18, BULLETS = 19, CELLS = 20, ROCKETS = 21, SLUGS = 22;*/
+    		//actualAmmo, Damage, Accuracy, CD, Distance
+    		
+    		/*switch (weaponIndex){
+    			case BLASTER:
+    				if(actualAmmo < 20){
+        				
+    				}
+    				if(actualAmmo < 50){
+        				
+    				}
+    				if(actualAmmo < 80){
+        				
+    				}
+    				if(actualAmmo < 100){
+        				
+    				}
+    				break;
+    			case SHOTGUN:
+    				break;
+    			case SUPER_SHOTGUN:
+    				break;
+    			case MACHINEGUN:
+    				break;
+    			case CHAINGUN:
+    				break;
+    			case GRENADES:
+    				break;
+    			case GRENADE_LAUNCHER:
+    				break;
+    			case ROCKET_LAUNCHER:
+    				break;
+    			case HYPERBLASTER:
+    				break;
+    			case RAILGUN:
+    				break;
+    		}*/
+            return res;
+    	}
+    	
+        private int decideBestWeapon(Player player){
+        	java.util.Vector<Entity> weaponsVector = this.getWeapons(null);
+        	System.out.println("TENGO "+weaponsVector.size()+" ARMAS");
+        	int maxAmmo = 0, directDamage = 0, accuracy = 0, CD = 0, weaponIndex; 
+        	int [] preferencias = new int[weaponsVector.size()];
+        	
+        	for(int i=0;i<weaponsVector.size();i++){
+        		System.out.println("TENGO "+weaponsVector.get(i).getName());
+        		weaponIndex = getWeaponStats(weaponsVector.get(i).getName(), maxAmmo, directDamage, accuracy, CD);
+            	preferencias[i] = getFuzzyValue(weaponIndex, maxAmmo, directDamage, accuracy, CD, 100);
+        	}
+        	
+        	return max(preferencias);
+        }
+        
         //Enemy tiene la entidad del enemigo
         private int decideBattle()
         {
@@ -440,6 +653,8 @@ public final class MiBotseMueve extends ObserverBot
         */
         	
         	/*AQUI ESTARIA BIEN QUE CAMBIARAMOS A NUESTRA MEJOR ARMA + MUNICION*/
+        	decideBestWeapon(player);
+        	
             int res = -1;
             try {
             	engine = new Rete();
@@ -463,6 +678,10 @@ public final class MiBotseMueve extends ObserverBot
                 // Porcentaje de municiï¿½n actual
                 engine.assertString("(ammo "+100*(player.getAmmo()/player.getPlayerGun().getMaxAmmo(player.getPlayerGun().getAmmoInventoryIndex()))+")");
 
+                // Valoración del arma del enemigo
+                engine.assertString("(weapon "+valueOfWeapon(player.getWeaponIndex())+")");
+                
+                //¿Nos ve el enemigo?
                 
                 engine.assertString("(items Health BigHealth Armor BigArmor)");
                 engine.assertString("(itemsDistance 30 40 20 50)");
