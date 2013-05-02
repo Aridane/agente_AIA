@@ -14,8 +14,8 @@
 (defrule r2
     (healthLowLimit ?lim)
     (healthHighLimit ?limH)
-    (health ?h&:(< ?h ?lim))
-    ?id <- (health ?h&:(> ?h ?limH))
+    (health ?h&:(> ?h ?lim))
+    ?id <- (health ?h&:(< ?h ?limH))
     =>
     (assert (healthLevel Medium))
     (retract ?id)

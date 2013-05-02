@@ -14,8 +14,8 @@
 (defrule r2
     (healthLowLimit ?lim)
     (healthHighLimit ?limH)
-    (health ?h&:(< ?h ?lim))
-    ?id <- (health ?h&:(> ?h ?limH))
+    (health ?h&:(> ?h ?lim))
+    ?id <- (health ?h&:(< ?h ?limH))
     =>
     (printout t "Jess -> vida media")
     (assert (healthLevel Medium))
@@ -38,6 +38,13 @@
     =>
     (bind ?*ACTION* 3)
 )
+
+(defrule r11
+    (healthLevel Medium)
+    =>
+    (bind ?*ACTION* 3)
+)
+
 (defrule r8
     (healthLevel High)
     (ammo ?amm&:(> ?amm 50))

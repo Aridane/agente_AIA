@@ -60,9 +60,9 @@ public final class MiBotseMueve extends ObserverBot
 	//Weapon accuracy
 	int[] WEAPON_ACCURACY = {1,1,1,1,1,1,1,1,1,1,1};
 	//en Filas -> arma-7
-	//en Columnas 0 -> índice de tipo de munición
-	//en Columnas 1 -> munición por recogida
-	//en Columnas 2 -> munición máxima
+	//en Columnas 0 -> ï¿½ndice de tipo de municiï¿½n
+	//en Columnas 1 -> municiï¿½n por recogida
+	//en Columnas 2 -> municiï¿½n mï¿½xima
 	
 	int [][] weaponsIndex = new int[11][3];
 	
@@ -165,8 +165,9 @@ public final class MiBotseMueve extends ObserverBot
 	{		
 		//Autorefresco del inventario
 		this.setAutoInventoryRefresh(true);
+
 		// 0 = associated ammo inventory index, 1 = ammo per pickup, 2 = max ammo
-		//Además los indices de 0/10 son armas
+		//Ademï¿½s los indices de 0/10 son armas
 		weaponsIndex[0][0] = -1;	weaponsIndex[0][1] = -1;	weaponsIndex[0][2] = -1;
 		weaponsIndex[1][0] = 18;	weaponsIndex[1][1] = 10;	weaponsIndex[1][2] = 100;
 		weaponsIndex[2][0] = 18;	weaponsIndex[2][1] = 10;	weaponsIndex[2][2] = 100;
@@ -178,12 +179,13 @@ public final class MiBotseMueve extends ObserverBot
 		weaponsIndex[8][0] = 20;	weaponsIndex[8][1] = 50;	weaponsIndex[8][2] = 200;
 		weaponsIndex[9][0] = 22;	weaponsIndex[9][1] = 10;	weaponsIndex[9][2] = 50;
 		weaponsIndex[10][0] = 20;	weaponsIndex[10][1] = 50;	weaponsIndex[10][2] = 200;
+
 	}
 
         //Distintos valores que puede dar decideBattle()
-        int FIGHT = 0;
-        int CHASE = 1;
-        int RUNAWAY = 2;
+        int FIGHT = 1;
+        int CHASE = 2;
+        int RUNAWAY = 3;
         
         //Posicion del objetivo a largo plazo
         Origin goalPos;
@@ -217,16 +219,26 @@ public final class MiBotseMueve extends ObserverBot
         public void runAI(World w)
 	{
 
-                 int[] winner = new int[3];
+                int nPoints = 8;
+                int population = 20;
+                double mutationRate = 0.5;
+                int[] winner = new int[nPoints];
                 Origin o1 = new Origin(5,2,0);
                 Origin o2 = new Origin(3,4,0);
                 Origin o3 = new Origin(1,1,0);
                 Origin o4 = new Origin(1,4,0);
-                Origin[] specimenAttributes = {o1,o2,o3,o4};
+                Origin o5 = new Origin(10,3,0);
+                Origin o6 = new Origin(2,1,0);
+                Origin o7 = new Origin(7,3,0);
+                Origin o8 = new Origin(8,2,0);
+                Origin[] specimenAttributes = {o1,o2,o3,o4,o5,o6,o7,o8};
                 Origin actualPos = new Origin(0,0,0);
                 
-                //geneticAlgorithm(winner,specimenAttributes,actualPos,10,4);
-                System.out.println("winner = "+ winner[0] + " " + winner[1] + " " + winner[2]);           
+                
+                
+                int iterations = theOriginOfSpecies(winner,specimenAttributes,actualPos,population,nPoints,mutationRate);
+                System.out.println("winner = "+ winner[0] + " " + winner[1] + " " + winner[2] + " " + winner[3] + " " + winner[4] + " " + winner[5] +  " " + winner[6] + " " + winner[7]);  
+                System.out.println("iterations  = "+ iterations); 
             //world.getEntities();
             //System.out.println("entities = " );
 
@@ -236,10 +248,10 @@ public final class MiBotseMueve extends ObserverBot
 
             world = w;
             player = world.getPlayer();
-
+            Vector items = world.getItems();
             enemy = world.getOpponentByName("Player");
 
-            Vector opponents = world.getOpponents();;
+            Vector opponents = world.getOpponents();
 
 			
                 /* if(hasRoute==0)
@@ -314,8 +326,8 @@ public final class MiBotseMueve extends ObserverBot
             }
             
 
-            /*
-
+            
+/*
            
             //CÃ³digo automata
            // System.out.println("AUTOMATA");
@@ -325,7 +337,7 @@ public final class MiBotseMueve extends ObserverBot
             nextWayPoint = new Origin(0,0,0);
 
             aim.set(targetPos.getX()-player.getPosition().getX(), targetPos.getY()-player.getPosition().getY(), targetPos.getZ()-player.getPosition().getZ());
-            System.out.println("CHECKPOINT1.5");
+            //System.out.println("CHECKPOINT1.5");
             if(this.enemyVisible(player.getPosition(),mibsp, opponents, aim)!=null)
             {
 
@@ -344,17 +356,19 @@ public final class MiBotseMueve extends ObserverBot
                 if(battleStrategy == CHASE)
                 {
                     //Perseguir
+                    
                 }
                 if(battleStrategy == RUNAWAY)
                 {
                     //Huir
+                    
                 }
             }
             //No hay enemigo visible
             else
             {
-
-            	System.out.println("CHECKPOINT2");
+                setAction(Action.ATTACK, false);
+            	//System.out.println("CHECKPOINT2");
                 //System.out.println("ENEMIGO NO VISIBLE");
                 //Si ya se ha cumplido el objetivo o es el principio obtenemos uno nuevo
                 if(!goal)
@@ -682,10 +696,10 @@ public final class MiBotseMueve extends ObserverBot
                 // Porcentaje de municiï¿½n actual
                 engine.assertString("(ammo "+100*(player.getAmmo()/player.getPlayerGun().getMaxAmmo(player.getPlayerGun().getAmmoInventoryIndex()))+")");
 
-                // Valoración del arma del enemigo
+                // Valoraciï¿½n del arma del enemigo
                 engine.assertString("(weapon "+valueOfWeapon(player.getWeaponIndex())+")");
                 
-                //¿Nos ve el enemigo?
+                //ï¿½Nos ve el enemigo?
                 
                 engine.assertString("(items Health BigHealth Armor BigArmor)");
                 engine.assertString("(itemsDistance 30 40 20 50)");
@@ -698,7 +712,7 @@ public final class MiBotseMueve extends ObserverBot
                 engine.run();
 
                 res = engine.eval("?*ACTION*").intValue(null);
-                System.out.println("res = " + res);
+                System.out.println("BATTLE res = " + res);
 
             } catch (JessException je) {
                 System.out.println(je.toString());
@@ -761,7 +775,7 @@ public final class MiBotseMueve extends ObserverBot
         ///////////////////////////////////////
         //Funciones para el algoritmo genetico
         //////////////////////////////////////
-        private void geneticAlgorithm(int[] evolutionWinner,Origin[] specimenAttributes,Origin actualPos,int population,int nAttributes)
+        private int theOriginOfSpecies(int[] evolutionWinner,Origin[] specimenAttributes,Origin actualPos,int population,int nAttributes,double mutationProb)
         {
             System.out.println("EMPIEZA ALGORITMO GENETICO");
             int iterations = 0;
@@ -771,41 +785,56 @@ public final class MiBotseMueve extends ObserverBot
             int[][] offsprings = new int[population][nAttributes];
             double max = 100000;
             double[] info = new double[2];
+            int[][] ancestors = new int[population][nAttributes];
             getInitialSpecimenSet(specimenSet,nAttributes);
-            System.out.println("specimenSet Inicial");
+        /*    System.out.println("specimenSet Inicial");
             for(int i=0;i<population;i++)
             {
-                System.out.println(specimenSet[i][0] + " " + specimenSet[i][1] + " " + specimenSet[i][2] + " " + specimenSet[i][3]);
-            }
+                System.out.println(specimenSet[i][0] + " " + specimenSet[i][1] + " " + specimenSet[i][2] + " " + specimenSet[i][3]+ " " + specimenSet[i][4] + " " + specimenSet[i][5]);
+            }*/
             evalSpecimenSet(fitness,specimenSet,population,actualPos,specimenAttributes,nAttributes); 
-            System.out.println("fitness Inicial");
+   /*         System.out.println("fitness Inicial");
             for(int i=0;i<population;i++)
             {
                 System.out.println(fitness[i]);
-            }
-            while((max(fitness)[0] != max) && (iterations < 1))
+            }*/
+            while(iterations < 1000)
             {
                 info = max(fitness);
-                System.out.println("max = " + info[0]);
+       //         System.out.println("max = " + info[0]);
                 max = info[0];
                 getNaturalSelection(reproductionRate,fitness);
-                System.out.println("reproduction Rate");
+       /*        System.out.println("reproduction Rate");
                 for(int i=0;i<population;i++)
                 {
                     System.out.println(reproductionRate[i]);;
-                }
+                }*/
                 reproduceSpecimenSet(offsprings,specimenSet,reproductionRate);
-                System.out.println("descendientes");
+       /*         System.out.println("descendientes");
                 for(int i=0;i<population;i++)
                 {
-                    System.out.println(offsprings[i][0] + " " + offsprings[i][1] + " " + offsprings[i][2]);
-                }                
-                //mutateSpecimens(offsprings);
+                    System.out.println(offsprings[i][0] + " " + offsprings[i][1] + " " + offsprings[i][2] + " " + offsprings[i][3]+ " " + offsprings[i][4] + " " + offsprings[i][5]);
+                } */
+                if(evolSpecie(offsprings,ancestors)) break;
+                else noCountryForOldMen(ancestors,offsprings); 
+                mutateSpecimens(offsprings,mutationProb);
+       /*         System.out.println("descendientes mutantes");
+                for(int i=0;i<population;i++)
+                {
+                    System.out.println(offsprings[i][0] + " " + offsprings[i][1] + " " + offsprings[i][2] + " " + offsprings[i][3]+ " " + offsprings[i][4] + " " + offsprings[i][5]);
+                }*/
                 evalSpecimenSet(fitness,offsprings,population,actualPos,specimenAttributes,nAttributes);
-                noCountryForAllMen(specimenSet,offsprings);
+                noCountryForOldMen(specimenSet,offsprings);
+        /*        System.out.println("fitness");
+                for(int i=0;i<population;i++)
+                {
+                    System.out.println(fitness[i]);
+                }*/
                 iterations++;
             }
-            evolutionWinner = specimenSet[(int)info[1]];
+            System.out.println("Fin de la evolucion");
+            for(int i=0;i<specimenSet[0].length;i++) evolutionWinner[i] = specimenSet[(int)info[1]][i];
+            return iterations;
         }
         
         
@@ -833,7 +862,6 @@ public final class MiBotseMueve extends ObserverBot
                 {
                     specimenSet[i][j] = specimen[j];
                 }
-                System.out.println("espec aceptado" + specimenSet[i][0] + " " + specimenSet[i][1] + " " + specimenSet[i][2] + " ");
             }
         }
         
@@ -851,7 +879,6 @@ public final class MiBotseMueve extends ObserverBot
                 }
                 if(distinto == false) return true;
             }
-            System.out.println("UNO NUEVO!!!!");
             return false;
         }
         
@@ -891,17 +918,17 @@ public final class MiBotseMueve extends ObserverBot
             {
                 if(i+1<nAttributes) distance = distance + euclideanDistance(specimenAttributes[specimen[i]],specimenAttributes[specimen[i+1]]);
             }
-            return 100000/Math.pow(distance,5);
+            return 1000/Math.pow(distance,3);
         }
         
         
         private double[] max(double[] vector)
         {
-            double max = 100000;
+            double max = 0;
             int index = 0;
             for(int i=0;i<vector.length;i++)
             {
-                if(vector[i] < max)
+                if(vector[i] > max)
                 {
                     max = vector[i];
                     index = i;
@@ -954,13 +981,19 @@ public final class MiBotseMueve extends ObserverBot
             for(int i=0;i<specimenSet.length;i+=2)
             {
                 rateGen = getSpecimensToProcreate(male,female,specimenSet,reproductionRate,combinations,countCombs);
-                System.out.println("rateGen " + rateGen);
+      //          System.out.println("rateGen " + rateGen);
                 reproduceSpecimens(children,male,female,rateGen);
-                System.out.println("children " + children[0][0] + " " + children[0][1] + " " + children[0][2]);
-                System.out.println("children " + children[1][0] + " " + children[1][1] + " " + children[1][2]);
-                offspringSet[i] = children[0];
-                offspringSet[i+1] = children[1];
-            }          
+ /*               System.out.println("children " + children[0][0] + " " + children[0][1] + " " + children[0][2] + " " + children[0][3]+ " " + children[0][4] + " " + children[0][5]);
+                System.out.println("children " + children[1][0] + " " + children[1][1] + " " + children[1][2] + " " + children[1][3]+ " " + children[1][4] + " " + children[1][5]);
+          */    
+                for(int j=0;j<specimenSet[0].length;j++)
+                {
+                    offspringSet[i][j] = children[0][j];
+                    offspringSet[i+1][j] = children[1][j];
+                }
+                countCombs++;
+
+            }      
         }
         
         private double getSpecimensToProcreate(int[] male,int[] female,int[][] specimenSet,double[] reproductionRate,int[][] combinations,int countCombs)
@@ -969,34 +1002,36 @@ public final class MiBotseMueve extends ObserverBot
             double acum = 0;
             int indexMale = 0;
             int indexFemale = 0;
+            int[] indexes = new int[2];
             boolean first = true;
-            System.out.println("getspecimenstoprocreate");
+    //        System.out.println("getspecimenstoprocreate");        
             for(int i=0;i<acumRate.length;i++)
             {
                 acumRate[i] = acum + reproductionRate[i];
                 acum = acumRate[i];
             }
-            System.out.println("acumrate");
+    /*        System.out.println("acumrate");
             for(int i=0;i<acumRate.length;i++)
             {
                 System.out.println(acumRate[i]);
-            }
+            }*/
             while((first == true) || usedCombination(indexMale,indexFemale,combinations,countCombs))
             {
+    //            System.out.println("obtener pareja");
                 first = false;
-                int[] indexes = getTwoSpecimen(acumRate);
+                getTwoSpecimen(indexes,acumRate);
                 indexMale = indexes[0];
                 indexFemale = indexes[1];
-            }
+            } 
             for(int i=0;i<male.length;i++) 
             {
                 male[i] = specimenSet[indexMale][i];
                 female[i] = specimenSet[indexFemale][i];
             }
             
-        System.out.println("male " + male[0] + " " + male[1] + " " + male[2]);
-          System.out.println("female " + female[0] + " " + female[1] + " " + female[2]);
-            combinations[countCombs][0] = indexMale;
+   /*     System.out.println("male " + male[0] + " " + male[1] + " " + male[2] + " " + male[3] + " " + male[4] + " " + male[5]);
+          System.out.println("female " + female[0] + " " + female[1] + " " + female[2] + " " + female[3] + " " + female[4] + " " + female[5]);
+          */  combinations[countCombs][0] = indexMale;
             combinations[countCombs][1] = indexFemale;
             return reproductionRate[indexMale]/(reproductionRate[indexMale]+reproductionRate[indexFemale]);
         }
@@ -1014,16 +1049,18 @@ public final class MiBotseMueve extends ObserverBot
             return false;
         }
         
-        private int[] getTwoSpecimen(double[] acumRate)
+        private void getTwoSpecimen(int[] indexes,double[] acumRate)
         {
             double random_1;
             double random_2;
             int index_1 = 0;
-            int index_2 = 1;
+            int index_2 = 0;
             while(index_1 == index_2)
             {
                 random_1 = Math.random();
                 random_2 = Math.random();
+      /*          System.out.println("random 1 = " + random_1);
+                System.out.println("random 2 = " + random_2);*/
                 for(int i=0;i<acumRate.length;i++)
                 {
                     if(i > 0)
@@ -1050,18 +1087,18 @@ public final class MiBotseMueve extends ObserverBot
                     }
                 }
             }        
-            return null;
-//            return res;
+            indexes[0] = index_1;
+            indexes[1] = index_2;
         }
 
         
         private void reproduceSpecimens(int[][] children,int[] male,int[] female,double rateGen)
         {
-            System.out.println("reproduce specimens");
+  //          System.out.println("reproduce specimens");
             int indexPartGen = (int)Math.floor(rateGen*male.length);
-                    System.out.println("male " + male[0] + " " + male[1] + " " + male[2]);
-          System.out.println("female " + female[0] + " " + female[1] + " " + female[2]);
-            System.out.println("indexpartgen " + indexPartGen);
+  /*          System.out.println("male " + male[0] + " " + male[1] + " " + male[2] + " " + male[3] + " " + male[4] + " " + male[5]);
+            System.out.println("female " + female[0] + " " + female[1] + " " + female[2] + " " + female[3] +  " " + female[4] + " " + female[5]);
+            System.out.println("indexpartgen " + indexPartGen);*/
             for(int i=0;i<indexPartGen;i++)
             {               
                 children[0][i] = male[i];
@@ -1071,11 +1108,13 @@ public final class MiBotseMueve extends ObserverBot
             {
                 children[0][i] = female[i];
             }
-                            System.out.println("children primero " + children[0][0] + " " + children[0][1] + " " + children[0][2]);
-            changeDuplicateAttributes(children[0],male,female,indexPartGen);
-            System.out.println("children primero sin duplis " + children[0][0] + " " + children[0][1] + " " + children[0][2]);
+      //      System.out.println("children primero " + children[0][0] + " " + children[0][1] + " " + children[0][2] + " " + children[0][3]+ " " + children[0][4] + " " + children[0][5]);
+
+            if(rateGen<0.5) changeDuplicateAttributes(children[0],male,indexPartGen,0);
+            else changeDuplicateAttributes(children[0],female,indexPartGen,1);
+  //          System.out.println("children primero sin duplis" + children[0][0] + " " + children[0][1] + " " + children[0][2] + " " + children[0][3]+ " " + children[0][4] + " " + children[0][5]);
             indexPartGen =  male.length - indexPartGen;
-            System.out.println("indexpartgen " + indexPartGen);
+   //         System.out.println("indexpartgen " + indexPartGen);
             for(int i=0;i<indexPartGen;i++)
             {
                 children[1][i] = female[i];
@@ -1084,47 +1123,111 @@ public final class MiBotseMueve extends ObserverBot
             {
                 children[1][i] = male[i];
             }            
-                            System.out.println("children segundo " + children[1][0] + " " + children[1][1] + " " + children[1][2]);
-            changeDuplicateAttributes(children[1],female,male,indexPartGen);
-            System.out.println("children segundo sin duplis " + children[1][0] + " " + children[1][1] + " " + children[1][2]);
+   //                         System.out.println("children segundo " + children[1][0] + " " + children[1][1] + " " + children[1][2] + " " + children[1][3] + " " + children[1][4] + " " + children[1][5]);
+            if(rateGen<0.5) changeDuplicateAttributes(children[1],male,indexPartGen,1);
+            else changeDuplicateAttributes(children[1],female,indexPartGen,0);
+     //       System.out.println("children segundo sin duplis " + children[1][0] + " " + children[1][1] + " " + children[1][2] + " " + children[1][3]+ " " + children[1][4] + " " + children[1][5]);
         }
         
-        private void changeDuplicateAttributes(int[] children,int[] male,int[] female,int index)
+        private void changeDuplicateAttributes(int[] children,int[] bad_parent,int index,int bad_half)
         {
             int duplicate;
-            System.out.println("duplicado = " + getDuplicate(children));
-            while((duplicate = getDuplicate(children)) != -1)
+       //     System.out.println("duplicado = " + getDuplicate(children,bad_half));
+            while((duplicate = getDuplicate(children,bad_half)) != -1)
             {
-                children[duplicate] = getElementNotEqual(children[duplicate],male,index);
+       /*         System.out.println("index_bad = " + index);
+                System.out.println("bad_half = " + bad_half);
+        */        children[duplicate] = getElementNotEqual(children,children[duplicate],bad_parent,index,bad_half);
+         //       System.out.println("elemento nuevo = " + children[duplicate]);
             }
         }
         
-        private int getDuplicate(int[] vector)
+        private int getDuplicate(int[] vector,int bad_half)
         {
+        //    System.out.println(vector.length);
             for(int i=0;i<vector.length;i++)
             {
                 for(int j=0;j<vector.length;j++)
                 {
-                    if((i!=j) && (vector[i] == vector[j])) return i;
+                    if((i!=j) && (vector[i] == vector[j]))
+                    {
+                        if(bad_half == 0)
+                        {
+                            if(i<j) return i;
+                            else return j;
+                        }
+                        else
+                        {
+                            if(i<j) return j;
+                            else return i;
+                        }
+                    }
                 }
             }
             return -1;
         }
         
-        private int getElementNotEqual(int element,int[] male,int index)
+        private int getElementNotEqual(int[] children,int element,int[] vector,int index,int bad_half)
         {
-            for(int i=0;i<index;i++)
+            if(bad_half == 1)
             {
-                if(element != male[i]) return male[i];
+                for(int i=0;i<index+1;i++)
+                {
+                    if((element != vector[i]) && (!isInVector(vector[i],children,children.length))) return vector[i];
+                }
+            }
+            else
+            {
+                for(int i=index;i<vector.length;i++)
+                {
+                    if((element != vector[i]) && (!isInVector(vector[i],children,children.length))) return vector[i];
+                }
             }
             return -1;
         }
         
-        private void noCountryForAllMen(int[][] specimenSet,int[][] offsprings)
+        private boolean evolSpecie(int[][] offsprings,int[][] ancestors)
+        {
+         //   System.out.println("Especie evolucionada??");
+            for(int i=0;i<offsprings.length;i++)
+            {
+                for(int j=0;j<offsprings[0].length;j++)
+                {
+          //          System.out.println("descendiente = " + offsprings[i][j]  + " ancestor = " +  ancestors[i][j]);
+                    if(offsprings[i][j] != ancestors[i][j]) return false;
+                }
+            }
+            return true;
+        }
+        
+        private void mutateSpecimens(int[][] offsprings,double mutationProb)
+        {
+            for(int i=0;i<offsprings.length;i++)
+            {
+                double mutacion = Math.random();
+          //      System.out.println("mutacion prob = " + mutacion);
+                if(mutacion < mutationProb)
+                //if(Math.random() < mutationProb)
+                {
+                    int gen_1 = (int)((Math.random()*100)%offsprings[0].length);
+                    int gen_2;
+                    while((gen_2 = (int)((Math.random()*100)%offsprings[0].length)) == gen_1);
+            /*        System.out.println("specimen = " + i);
+                    System.out.println("gen_1 = " + gen_1);
+                    System.out.println("gen_2 = " + gen_2);*/
+                    int aux = offsprings[i][gen_1];
+                    offsprings[i][gen_1] = offsprings[i][gen_2];
+                    offsprings[i][gen_2] = aux;
+                }
+            }
+        }
+        
+        private void noCountryForOldMen(int[][] specimenSet,int[][] offsprings)
         {
             for(int i=0;i<specimenSet.length;i++)
             {
-                specimenSet[i] = offsprings[i];
+                for(int j=0;j<specimenSet[0].length;j++)
+                    specimenSet[i][j] = offsprings[i][j];
             }
         }
         
