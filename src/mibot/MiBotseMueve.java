@@ -238,8 +238,18 @@ public final class MiBotseMueve extends ObserverBot
 
             Vector opponents = world.getOpponents();
 
-/*
-            targetPos = new Origin();
+			
+                /* if(hasRoute==0)
+                {
+                    hasRoute = 1; 
+                    route = findShortestPathToWeapon(null);
+                    routeLength = route.length;
+
+
+                }*/
+
+
+           /* targetPos = new Origin();
  
 
             Vector3f mov = new Vector3f(0,0,0);
@@ -299,8 +309,7 @@ public final class MiBotseMueve extends ObserverBot
 
 
             }*/
-           
-           
+
             //Código automata
             
             if(longTermGoalPath == null)
@@ -325,6 +334,7 @@ public final class MiBotseMueve extends ObserverBot
                 longTermGoalPath = null;
 
                 battleStrategy = decideBattle();
+                System.out.println("BATTLE = "+battleStrategy);
                 if(battleStrategy == FIGHT)
                 {
                     //Atacar
@@ -462,43 +472,10 @@ public final class MiBotseMueve extends ObserverBot
         	else return 0;
         }
         
-    	private int getWeaponStats(String name, int maxAmmo, int directDamage, int accuracy, int CD)
+    	private int getWeaponStats(int Index, int maxAmmo, int directDamage, int accuracy, int CD)
     	{
     		PlayerGun gun = new PlayerGun();
-    		int res = 0;
-    		if (name.equals("weapon_blaster")){
-    			res = 7;
-    		}
-    		if (name.equals("weapon_shotgun")){
-    			res = 8;
-    		}
-    		if (name.equals("weapon_supershotgun")){
-    			res = 9;
-    		}
-    		if (name.equals("weapon_machinegun")){
-    			res = 10;
-    		}
-    		if (name.equals("weapon_chaingun")){
-    			res = 11;
-    		}
-    		if (name.equals("weapon_grenades")){
-    			res = 12;
-    		}
-    		if (name.equals("weapon_grenadelauncher")){
-    			res = 13;
-    		}
-    		if (name.equals("weapon_rocketlauncher")){
-    			res = 14;
-    		}
-    		if (name.equals("weapon_hyperblaster")){
-    			res = 15;
-    		}
-    		if (name.equals("weapon_railgun")){
-    			res = 16;
-    		}
-    		if (name.equals("weapon_bfg")){
-    			res = 17;
-    		}
+    		int res = Index;
 			CD = WEAPON_CDS[res-7];
 			maxAmmo = weaponsIndex[res-7][2];
 			directDamage = WEAPON_DAMAGE[res-7];
@@ -635,17 +612,28 @@ public final class MiBotseMueve extends ObserverBot
     		}*/
             //return res;
     	}
-    	
+    	void getWeaponIndexes(Vector<Integer> vector){
+    		for (int i=0;i<11;i++){
+    			int index = i+7;
+    			if (this.hasItem(index)) vector.add(index);
+    		}
+    	}
         private int decideBestWeapon(Player player){
-        	java.util.Vector<Entity> weaponsVector = this.getWeapons(null);
+        	System.out.println("OBTENIENDO VECTOR DE ARMAS");
+        	java.util.Vector<Integer> weaponsVector = new Vector<Integer>();
+        	getWeaponIndexes(weaponsVector);
+        	System.out.println("VECTOR OBTENIDO");
         	System.out.println("TENGO "+weaponsVector.size()+" ARMAS");
         	int maxAmmo = 0, directDamage = 0, accuracy = 0, CD = 0, weaponIndex; 
+        	System.out.println("PETADO?");
         	int [] preferencias = new int[weaponsVector.size()];
         	
         	for(int i=0;i<weaponsVector.size();i++){
-        		weaponIndex = getWeaponStats(weaponsVector.get(i).getName(), maxAmmo, directDamage, accuracy, CD);
+        		System.out.println("FUZZY! " + i);
+        		weaponIndex = getWeaponStats(weaponsVector.get(i), maxAmmo, directDamage, accuracy, CD);
+        		System.out.println("FUZZY2! " + i);
             	preferencias[i] = getFuzzyValue(weaponIndex, maxAmmo, directDamage, accuracy, CD, 100);
-            	System.out.println("TENGO "+weaponsVector.get(i).getName()+ "DCDA = "+ preferencias[i]);
+            	System.out.println("TENGO "+weaponIndex+ " DCDA = "+ preferencias[i]);
         	}
         	
         	return max(preferencias);
@@ -668,7 +656,9 @@ public final class MiBotseMueve extends ObserverBot
         */
         	
         	/*AQUI ESTARIA BIEN QUE CAMBIARAMOS A NUESTRA MEJOR ARMA + MUNICION*/
+        	System.out.println("DECIDING WEAPON");
         	decideBestWeapon(player);
+        	System.out.println("WEAPON DECIDED");
         	return FIGHT;
             /*int res = -1;
             try {
