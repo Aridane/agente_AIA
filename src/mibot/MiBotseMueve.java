@@ -535,12 +535,12 @@ public final class MiBotseMueve extends ObserverBot
     	//DMG -> 0 - 200
     	//CD -> 0 - 24
     	//accuracy -> 0 - 10
-    	int damageCDAccuracyHeuristic(int directDamage, int CD, int accuracy){
-    		float accuracyFactor = 10*accuracy;
-    		float CDFactor = (float) (100.0*(CD+0.01)/24.0);
-    		float damageFactor = 0;
+    	double damageCDAccuracyHeuristic(int directDamage, int CD, int accuracy){
+    		double accuracyFactor = 10.0*accuracy;
+    		double CDFactor = (float) (100.0*(CD+0.01)/24.0);
+    		double damageFactor = 100*Math.log(directDamage)/Math.log(200.0);
 
-    		return 0;
+    		return 0.3*accuracyFactor-0.5*CDFactor+0.2*damageFactor;
     	}
     		
     	int accuracyEnemyDistanceHeuristic(int directDamage, int CD, int accuracy){
@@ -550,18 +550,19 @@ public final class MiBotseMueve extends ObserverBot
     		int res = -1;
     		int actualAmmo = 100*this.getInventoryItemCount(weaponsIndex[weaponIndex-7][0])/maxAmmo;
     		
-            try {
-            	engine = new Rete();
-                engine.batch(rutas.Jess2_path);
-                engine.eval("(reset)");
+           // try {
+            	//engine = new Rete();
+                //engine.batch(rutas.Jess2_path);
+                //engine.eval("(reset)");
                 
                 
                 
-                int DCDA = damageCDAccuracyHeuristic(directDamage, CD, accuracy);
+                double DCDA = damageCDAccuracyHeuristic(directDamage, CD, accuracy);
                 int AEd = accuracyEnemyDistanceHeuristic(directDamage, CD, accuracy);
                 
-                
-                engine.assertString("(weaponID "+weaponIndex+")");
+                return (int) DCDA;
+            //}
+                /*engine.assertString("(weaponID "+weaponIndex+")");
                 if (directDamage < damageLowLimit) engine.assertString("(damage LOW)");
                 else if (directDamage < damageHighLimit) engine.assertString("(damage MED)");
                 else if (directDamage > damageHighLimit) engine.assertString("(damage HIGH)");
@@ -588,10 +589,10 @@ public final class MiBotseMueve extends ObserverBot
 
                 res = engine.eval("?*ACTION*").intValue(null);
                 System.out.println("res = " + res);
-
-            } catch (JessException je) {
-                System.out.println(je.toString());
-            }
+*/
+            //} catch (JessException je) {
+            //    System.out.println(je.toString());
+            //}
     		
     		/*BLASTER = 7, SHOTGUN = 8, SUPER_SHOTGUN = 9,
     				MACHINEGUN = 10, CHAINGUN = 11, GRENADES = 12, GRENADE_LAUNCHER = 13,
@@ -636,7 +637,7 @@ public final class MiBotseMueve extends ObserverBot
     			case RAILGUN:
     				break;
     		}*/
-            return res;
+            //return res;
     	}
     	
         private int decideBestWeapon(Player player){
@@ -646,9 +647,9 @@ public final class MiBotseMueve extends ObserverBot
         	int [] preferencias = new int[weaponsVector.size()];
         	
         	for(int i=0;i<weaponsVector.size();i++){
-        		System.out.println("TENGO "+weaponsVector.get(i).getName());
         		weaponIndex = getWeaponStats(weaponsVector.get(i).getName(), maxAmmo, directDamage, accuracy, CD);
             	preferencias[i] = getFuzzyValue(weaponIndex, maxAmmo, directDamage, accuracy, CD, 100);
+            	System.out.println("TENGO "+weaponsVector.get(i).getName()+ "DCDA = "+ preferencias[i]);
         	}
         	
         	return max(preferencias);
@@ -672,8 +673,8 @@ public final class MiBotseMueve extends ObserverBot
         	
         	/*AQUI ESTARIA BIEN QUE CAMBIARAMOS A NUESTRA MEJOR ARMA + MUNICION*/
         	decideBestWeapon(player);
-        	
-            int res = -1;
+        	return FIGHT;
+            /*int res = -1;
             try {
             	engine = new Rete();
                 engine.batch(rutas.Jess2_path);
@@ -717,7 +718,7 @@ public final class MiBotseMueve extends ObserverBot
             } catch (JessException je) {
                 System.out.println(je.toString());
             }
-            return res;
+            return res;*/
         }
  
         
