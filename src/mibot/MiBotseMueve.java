@@ -216,54 +216,29 @@ public final class MiBotseMueve extends ObserverBot
         
         int count = 0;
 
+        boolean shortTermGoal = false;
+        Origin[] longTermGoalPath = null;
+        boolean seen = false;
+        int countGoalPath = 0;
+        int lengthGoalPath;
+                
         public void runAI(World w)
 	{
 
-                int nPoints = 8;
-                int population = 20;
-                double mutationRate = 0.5;
-                int[] winner = new int[nPoints];
-                Origin o1 = new Origin(5,2,0);
-                Origin o2 = new Origin(3,4,0);
-                Origin o3 = new Origin(1,1,0);
-                Origin o4 = new Origin(1,4,0);
-                Origin o5 = new Origin(10,3,0);
-                Origin o6 = new Origin(2,1,0);
-                Origin o7 = new Origin(7,3,0);
-                Origin o8 = new Origin(8,2,0);
-                Origin[] specimenAttributes = {o1,o2,o3,o4,o5,o6,o7,o8};
-                Origin actualPos = new Origin(0,0,0);
-                
-                
-                
-                int iterations = theOriginOfSpecies(winner,specimenAttributes,actualPos,population,nPoints,mutationRate);
-                System.out.println("winner = "+ winner[0] + " " + winner[1] + " " + winner[2] + " " + winner[3] + " " + winner[4] + " " + winner[5] +  " " + winner[6] + " " + winner[7]);  
-                System.out.println("iterations  = "+ iterations); 
-            //world.getEntities();
-            //System.out.println("entities = " );
-
+            
             if (mibsp==null) mibsp = new BSPParser(rutas.BSP_path);
-
-                    //"C:\\Users\\alvarin\\Desktop\\Dropbox\\Quinto\\AIA\\Qase\\q2dm1.bsp");
 
             world = w;
             player = world.getPlayer();
+            
+           
+            
             Vector items = world.getItems();
             enemy = world.getOpponentByName("Player");
 
             Vector opponents = world.getOpponents();
 
-			
-                /* if(hasRoute==0)
-                {
-                    hasRoute = 1; 
-                    route = findShortestPathToWeapon(null);
-                    routeLength = route.length;
-
-
-                }*/
-
-
+/*
             targetPos = new Origin();
  
 
@@ -323,33 +298,38 @@ public final class MiBotseMueve extends ObserverBot
                 }
 
 
-            }
-            
-
-            
-/*
+            }*/
+           
            
             //Código automata
-           // System.out.println("AUTOMATA");
+            
+            if(longTermGoalPath == null)
+            {
+                longTermGoalPath = new Origin[world.getEntities(false).size()];
+                lengthGoalPath = getLongTermGoalPath(longTermGoalPath,player.getPosition());
+                countGoalPath = 0;
+            }
+            
             int battleStrategy;
             Vector3f aim = new Vector3f(0,0,0);
             targetPos = new Origin(0,0,0);
             nextWayPoint = new Origin(0,0,0);
 
             aim.set(targetPos.getX()-player.getPosition().getX(), targetPos.getY()-player.getPosition().getY(), targetPos.getZ()-player.getPosition().getZ());
-            //System.out.println("CHECKPOINT1.5");
             if(this.enemyVisible(player.getPosition(),mibsp, opponents, aim)!=null)
             {
 
                 System.out.println("VISIBLE");
-                //Variable Enemy tiene la entidad
+                
+                //Despues de esto nada será igual y habrá que conseguir otro objetivo a largo plazo
+                longTermGoalPath = null;
 
                 battleStrategy = decideBattle();
                 if(battleStrategy == FIGHT)
                 {
                     //Atacar
-                	Vector3f mov = new Vector3f(0,0,0);
-                	aim = new Vector3f(enemy.getOrigin().getX() - player.getPosition().getX(),enemy.getOrigin().getY() - player.getPosition().getY(),enemy.getOrigin().getZ() - player.getPosition().getZ());
+                    Vector3f mov = new Vector3f(0,0,0);
+                    aim = new Vector3f(enemy.getOrigin().getX() - player.getPosition().getX(),enemy.getOrigin().getY() - player.getPosition().getY(),enemy.getOrigin().getZ() - player.getPosition().getZ());
                     this.setBotMovement(mov, aim, 100, PlayerMove.POSTURE_NORMAL);
                     setAction(Action.ATTACK, true);
                 }
@@ -363,43 +343,59 @@ public final class MiBotseMueve extends ObserverBot
                     //Huir
                     
                 }
+                seen = true;
             }
             //No hay enemigo visible
             else
             {
                 setAction(Action.ATTACK, false);
-            	//System.out.println("CHECKPOINT2");
-                //System.out.println("ENEMIGO NO VISIBLE");
                 //Si ya se ha cumplido el objetivo o es el principio obtenemos uno nuevo
-                if(!goal)
+                if(seen)
                 {
+                    seen = false;
+                    shortTermGoal = true;
                     actualWayPoint = 0;
-                    goalPos = decideGoal();
+                    goalPos = decideShortTermGoal();
 
                     route = this.findShortestPath(goalPos);
                     if(route == null) routeLength = 0;
                     else routeLength = route.length;
-                    goal = true;
                 }
-                    if(routeLength > 0)
-                    {
-                        //Obtener el siguiente wayPoint
-                        nextWayPoint.setX((int)route[actualWayPoint].getPosition().x);
-                        nextWayPoint.setY((int)route[actualWayPoint].getPosition().y);
-                        nextWayPoint.setZ((int)route[actualWayPoint].getPosition().z);             
+                else if(!goal)
+                {
+                    actualWayPoint = 0;
+                    System.out.println("OBJETIVO = " + longTermGoalPath[countGoalPath].getX() + " " + longTermGoalPath[countGoalPath].getY() + " "+ longTermGoalPath[countGoalPath].getZ());
+                    route = this.findShortestPath(longTermGoalPath[countGoalPath]);
+                    if(route == null) routeLength = 0;
+                    else routeLength = route.length;
+                    goal = true;
+                    countGoalPath++;
+                }
+                if(routeLength > 0)
+                {
+                    //Obtener el siguiente wayPoint
+                    nextWayPoint.setX((int)route[actualWayPoint].getPosition().x);
+                    nextWayPoint.setY((int)route[actualWayPoint].getPosition().y);
+                    nextWayPoint.setZ((int)route[actualWayPoint].getPosition().z);             
                 
-                        //System.out.println("SIG = " + nextWayPoint.getX() + " " + nextWayPoint.getY() + " "+ nextWayPoint.getZ());
+                    //System.out.println("SIG = " + nextWayPoint.getX() + " " + nextWayPoint.getY() + " "+ nextWayPoint.getZ());
                 
-                        arrived = makeMove(player.getPosition(),nextWayPoint);
-                    }
-                
+                    arrived = makeMove(player.getPosition(),nextWayPoint);
+                }               
                 if((arrived==1)||(routeLength == 0))
                 {
                     //System.out.println("LLEGO" + actualWayPoint + " " + routeLength);
                     if(actualWayPoint < routeLength - 1) actualWayPoint++;
-                    else goal = false;
+                    else 
+                    {
+ 
+                        if(!shortTermGoal) 
+                        {
+                            goal = false;
+                        }
+                    }
                 }
-            }*/
+            }
 
         }
         
@@ -408,7 +404,7 @@ public final class MiBotseMueve extends ObserverBot
         int GET_ARMOUR = 2;
              
         //Decide el objetivo a largo plazo
-        private Origin decideGoal()
+        private Origin decideShortTermGoal()
         {
             int res = -1;
             try {
@@ -769,7 +765,78 @@ public final class MiBotseMueve extends ObserverBot
         
         private double euclideanDistance(Origin o1,Origin o2)
         {
-            return Math.sqrt((o1.getX()-o2.getX())*(o1.getX()-o2.getX())+(o1.getY()-o2.getY())*(o1.getY()-o2.getY())+(o1.getZ()-o2.getZ())*(o1.getZ()-o2.getZ()));
+            return Math.sqrt((o1.getX()-o2.getX())*(o1.getX()-o2.getX())+(o1.getY()-o2.getY())*(o1.getY()-o2.getY()));
+        }
+        
+        
+        
+        
+        private int getLongTermGoalPath(Origin[] longTermGoalPath,Origin actualPos)
+        {
+            System.out.println("getLongTermGOalPath");
+            Vector totalEntities = world.getEntities(false);
+            Origin[] interestingEntities = new Origin[totalEntities.size()];
+            int count = 0;
+            Entity entity;
+            
+            //armorShard,cells,bullets,shells
+            boolean[] redundantItems = {false,false,false,false};
+            
+            for(int i=0;i<totalEntities.size();i++)
+            {
+                entity = (Entity)totalEntities.get(i);
+                if(isAnInterestingEntity(redundantItems,entity)) 
+                {
+                    
+                    interestingEntities[count] = new Origin(entity.getOrigin().getX(),entity.getOrigin().getY(),entity.getOrigin().getZ());
+                    count++;
+                }
+            }
+
+            System.out.println("YA LOS TENGO Y SON " + count);
+            int[] result = new int[count];
+            this.theOriginOfSpecies(result,interestingEntities,actualPos,100, count,0.5);
+            System.out.println("RESULTADO");
+            for(int i=0;i<result.length;i++) System.out.print(result[i] + " ");
+            System.out.println("");
+            for(int i=0;i<result.length;i++)
+            {
+                longTermGoalPath[i] = new Origin(interestingEntities[result[i]].getX(),interestingEntities[result[i]].getY(),interestingEntities[result[i]].getZ());
+            }
+            return count;
+        }
+        
+        
+        private boolean isAnInterestingEntity(boolean[] redundantItems,Entity entity)
+        {
+            System.out.println("numero = " + entity.getInventoryIndex());
+            if(entity.getInventoryIndex() == Inventory.COMBAT_ARMOR) return true;
+            if(entity.getInventoryIndex() == Inventory.JACKET_ARMOR) return true;
+            if((redundantItems[0] == false) && (entity.getInventoryIndex() == Inventory.ARMOR_SHARD))
+            {
+                redundantItems[0] = true;
+                return true;
+            }
+            if(entity.getInventoryIndex() == Inventory.HYPERBLASTER) return true;
+            if((redundantItems[1] == false) && (entity.getInventoryIndex() == Inventory.CELLS))
+            {
+                redundantItems[1] = true;
+                return true;
+            }
+            if(entity.getInventoryIndex() == Inventory.SHOTGUN) return true;
+            if((redundantItems[2] == false) && (entity.getInventoryIndex() == Inventory.SHELLS))
+            {
+                redundantItems[2] = true;
+                return true;
+            }
+            if(entity.getInventoryIndex() == Inventory.MACHINEGUN) return true;
+            if((redundantItems[3] == false) && (entity.getInventoryIndex() == Inventory.BULLETS)) 
+            {
+                redundantItems[3] = true;
+                return true;
+            }
+            if(entity.getInventoryIndex() == Inventory.RAILGUN) return true;
+            return false;
         }
         
         ///////////////////////////////////////
@@ -787,28 +854,35 @@ public final class MiBotseMueve extends ObserverBot
             double[] info = new double[2];
             int[][] ancestors = new int[population][nAttributes];
             getInitialSpecimenSet(specimenSet,nAttributes);
-        /*    System.out.println("specimenSet Inicial");
+            System.out.println("specimenSet Inicial");
             for(int i=0;i<population;i++)
             {
-                System.out.println(specimenSet[i][0] + " " + specimenSet[i][1] + " " + specimenSet[i][2] + " " + specimenSet[i][3]+ " " + specimenSet[i][4] + " " + specimenSet[i][5]);
-            }*/
+                for(int j=0;j<nAttributes;j++)
+                {
+                    System.out.print(specimenSet[i][j] + " ");
+                }
+                System.out.println("");
+            }
             evalSpecimenSet(fitness,specimenSet,population,actualPos,specimenAttributes,nAttributes); 
-   /*         System.out.println("fitness Inicial");
+            System.out.println("fitness Inicial");
             for(int i=0;i<population;i++)
             {
                 System.out.println(fitness[i]);
-            }*/
-            while(iterations < 1000)
+            }
+            while(iterations < 100000)
             {
                 info = max(fitness);
        //         System.out.println("max = " + info[0]);
                 max = info[0];
                 getNaturalSelection(reproductionRate,fitness);
-       /*        System.out.println("reproduction Rate");
-                for(int i=0;i<population;i++)
+                if(iterations == 0)
                 {
-                    System.out.println(reproductionRate[i]);;
-                }*/
+                    System.out.println("reproduction Rate");
+                    for(int i=0;i<population;i++)
+                    {
+                        System.out.println(reproductionRate[i]);;
+                    }
+                }
                 reproduceSpecimenSet(offsprings,specimenSet,reproductionRate);
        /*         System.out.println("descendientes");
                 for(int i=0;i<population;i++)
@@ -833,7 +907,19 @@ public final class MiBotseMueve extends ObserverBot
                 iterations++;
             }
             System.out.println("Fin de la evolucion");
+            System.out.println("specimenSet FINAL");
+            for(int i=0;i<population;i++)
+            {
+                for(int j=0;j<nAttributes;j++)
+                {
+                    System.out.print(specimenSet[i][j] + " ");
+                }
+                System.out.println("");
+            } 
+            System.out.println("fitness Final = " + fitness[(int)info[1]]);
+            
             for(int i=0;i<specimenSet[0].length;i++) evolutionWinner[i] = specimenSet[(int)info[1]][i];
+            System.out.println("iterations = " + iterations);
             return iterations;
         }
         
@@ -918,7 +1004,7 @@ public final class MiBotseMueve extends ObserverBot
             {
                 if(i+1<nAttributes) distance = distance + euclideanDistance(specimenAttributes[specimen[i]],specimenAttributes[specimen[i+1]]);
             }
-            return 1000/Math.pow(distance,3);
+            return Math.pow(1000,40)/Math.pow(distance,25);
         }
         
         
