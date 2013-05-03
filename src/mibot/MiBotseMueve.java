@@ -6,12 +6,7 @@ import java.util.Random;
 
 import soc.qase.bot.ObserverBot;
 import soc.qase.file.bsp.BSPParser;
-import soc.qase.state.Player;
-import soc.qase.state.PlayerMove;
-import soc.qase.state.World;
 import soc.qase.tools.vecmath.Vector3f;
-import soc.qase.state.Inventory;
-import soc.qase.state.Entity;
 
 
 import soc.qase.state.*;
@@ -71,7 +66,7 @@ public final class MiBotseMueve extends ObserverBot
         //Spawn, SeekItem, Battle_Chase, Battle_Retreat, Battle_Engage
         private String State = "Spawn";
         
-        private Waypoint [] route;
+        private Waypoint[] route;
         
         private int healthLowLimit = 40;
 
@@ -708,7 +703,7 @@ public final class MiBotseMueve extends ObserverBot
         }
  
         
-
+/*
 
         
         private double evalGoal(GoalState state)
@@ -752,7 +747,7 @@ public final class MiBotseMueve extends ObserverBot
             else factorHyperDistance = 0;
             return 1;
 
-        }
+        }*/
         
         private double euclideanDistance(Origin o1,Origin o2)
         {
@@ -786,7 +781,7 @@ public final class MiBotseMueve extends ObserverBot
 
             System.out.println("YA LOS TENGO Y SON " + count);
             int[] result = new int[count];
-            this.theOriginOfSpecies(result,interestingEntities,actualPos,100, count,0.5);
+            this.theOriginOfSpecies(result,interestingEntities,actualPos,120, count,0.5);
             System.out.println("RESULTADO");
             for(int i=0;i<result.length;i++) System.out.print(result[i] + " ");
             System.out.println("");
@@ -800,7 +795,6 @@ public final class MiBotseMueve extends ObserverBot
         
         private boolean isAnInterestingEntity(boolean[] redundantItems,Entity entity)
         {
-            System.out.println("numero = " + entity.getInventoryIndex());
             if(entity.getInventoryIndex() == Inventory.COMBAT_ARMOR) return true;
             if(entity.getInventoryIndex() == Inventory.JACKET_ARMOR) return true;
             if((redundantItems[0] == false) && (entity.getInventoryIndex() == Inventory.ARMOR_SHARD))
@@ -844,6 +838,9 @@ public final class MiBotseMueve extends ObserverBot
             double max = 100000;
             double[] info = new double[2];
             int[][] ancestors = new int[population][nAttributes];
+            WaypointDistances[] waypointDistances = new WaypointDistances[nAttributes+1];
+            for(int i=0;i<nAttributes;i++) waypointDistances[i] = new WaypointDistances(specimenAttributes[i],specimenAttributes,nAttributes,wpMap,false);
+            waypointDistances[nAttributes] = new WaypointDistances(actualPos,specimenAttributes,nAttributes,wpMap,true);
             getInitialSpecimenSet(specimenSet,nAttributes);
             System.out.println("specimenSet Inicial");
             for(int i=0;i<population;i++)
@@ -854,7 +851,7 @@ public final class MiBotseMueve extends ObserverBot
                 }
                 System.out.println("");
             }
-            evalSpecimenSet(fitness,specimenSet,population,actualPos,specimenAttributes,nAttributes); 
+            evalSpecimenSet(fitness,specimenSet,population,actualPos,specimenAttributes,nAttributes,waypointDistances); 
             System.out.println("fitness Inicial");
             for(int i=0;i<population;i++)
             {
@@ -888,7 +885,7 @@ public final class MiBotseMueve extends ObserverBot
                 {
                     System.out.println(offsprings[i][0] + " " + offsprings[i][1] + " " + offsprings[i][2] + " " + offsprings[i][3]+ " " + offsprings[i][4] + " " + offsprings[i][5]);
                 }*/
-                evalSpecimenSet(fitness,offsprings,population,actualPos,specimenAttributes,nAttributes);
+                evalSpecimenSet(fitness,offsprings,population,actualPos,specimenAttributes,nAttributes,waypointDistances);
                 noCountryForOldMen(specimenSet,offsprings);
         /*        System.out.println("fitness");
                 for(int i=0;i<population;i++)
@@ -980,24 +977,39 @@ public final class MiBotseMueve extends ObserverBot
             return false;
         }
         
-        private void evalSpecimenSet(double[] fitness,int[][] specimenSet,int population,Origin actualPos,Origin[] specimenAttributes,int nAttributes)
+        private void evalSpecimenSet(double[] fitness,int[][] specimenSet,int population,Origin actualPos,Origin[] specimenAttributes,int nAttributes,WaypointDistances[] waypointDistances)
         {
             for(int i=0;i<population;i++)
             {
-                fitness[i] = evalSpecimen(specimenSet[i],actualPos,specimenAttributes,nAttributes);
+                fitness[i] = evalSpecimen(specimenSet[i],actualPos,specimenAttributes,nAttributes,waypointDistances);
             }
         }
         
-        private double evalSpecimen(int[] specimen,Origin actualPos,Origin[] specimenAttributes,int nAttributes)
+        private double evalSpecimen(int[] specimen,Origin actualPos,Origin[] specimenAttributes,int nAttributes,WaypointDistances[] waypointDistances)
         {
-            double distance = euclideanDistance(actualPos,specimenAttributes[specimen[0]]);
+            WaypointDistances wpd = getWaypointDistances(actualPos,waypointDistances);
+            double distance = wpd.getWaypointDistanceToOrigin(specimenAttributes[specimen[0]]);
             for(int i=0;i<nAttributes;i++)
             {
-                if(i+1<nAttributes) distance = distance + euclideanDistance(specimenAttributes[specimen[i]],specimenAttributes[specimen[i+1]]);
+                if(i+1<nAttributes) 
+                {
+                    wpd = getWaypointDistances(specimenAttributes[specimen[i]],waypointDistances);
+                    distance = distance + wpd.getWaypointDistanceToOrigin(specimenAttributes[specimen[i+1]]);
+                }
             }
             return Math.pow(1000,40)/Math.pow(distance,25);
         }
         
+        
+        WaypointDistances getWaypointDistances(Origin or,WaypointDistances[] wpd)
+        {
+            for(int i=0;i<wpd.length;i++)
+            {
+                if(wpd[i].origin.equals(or)) return wpd[i];
+            }
+            return null;
+        }
+
         
         private double[] max(double[] vector)
         {
@@ -1351,7 +1363,7 @@ public final class MiBotseMueve extends ObserverBot
             dirMov.set((int)stepX,(int)stepY,0);
 
             setBotMovement(dirMov, dirMov, 1, PlayerMove.POSTURE_NORMAL);
-            if((X <= 20) && (X >= -20) && (Y <= 20) && (Y >= -20)) return 1;
+            if((X <= 50) && (X >= -50) && (Y <= 50) && (Y >= -50)) return 1;
             else return 0;
         }
         
