@@ -400,6 +400,7 @@ public final class MiBotseMueve extends ObserverBot
                         }
                     }
                 }
+                if(lengthGoalPath == countGoalPath) countGoalPath = 0;
             }
 
         }
@@ -414,7 +415,7 @@ public final class MiBotseMueve extends ObserverBot
             int res = -1;
             try {
 
-				engine = new Rete();
+		engine = new Rete();
 
                 engine.batch(rutas.Jess_path);
                 engine.eval("(reset)");
@@ -820,7 +821,7 @@ public final class MiBotseMueve extends ObserverBot
                 redundantItems[3] = true;
                 return true;
             }
-            if(entity.getInventoryIndex() == Inventory.RAILGUN) return true;
+            //if(entity.getInventoryIndex() == Inventory.RAILGUN) return true;
             return false;
         }
         
