@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.Vector;
 import java.util.Random;
 
+import soc.qase.*;
+
 import soc.qase.bot.ObserverBot;
 import soc.qase.file.bsp.BSPParser;
 import soc.qase.tools.vecmath.Vector3f;
@@ -18,7 +20,7 @@ import jess.*;
 import soc.qase.ai.waypoint.Waypoint;
 import soc.qase.ai.waypoint.WaypointMap;
 import soc.qase.ai.waypoint.WaypointMapGenerator;
-
+import soc.qase.com.*;
 
 
 //Cualquier bot debe extender a la clase ObserverBot, para hacer uso de sus funcionalidades
@@ -27,7 +29,8 @@ public final class MiBotseMueve extends ObserverBot
 	//Variables 
 	private World world = null;
 	private Player player = null;
-        
+    private Proxy proxy = new Proxy();
+	
         private Rutas rutas = new Rutas();
         
         private Vector3f PosPlayer= new Vector3f(0, 0, 0);
@@ -51,7 +54,7 @@ public final class MiBotseMueve extends ObserverBot
 	//Para consultar se accede con (arma - 7);
 	final int[] WEAPON_CDS = { 4, 11, 11, 0, 0, 13, 11, 8, 0, 15, 24 };
 	//Hay que tener en cuenta que la escopeta lanza 12 balas
-	final int[] WEAPON_DAMAGE = {15, 4, 6, 8, 6, 0, 120, 100, 15, 100, 200};
+	final int[] WEAPON_DAMAGE = {15, 16, 24, 8, 6, 0, 120, 100, 15, 100, 200};
 	//Weapon accuracy
 	int[] WEAPON_ACCURACY = {1,1,1,1,1,1,1,1,1,1,1};
 	//en Filas -> arma-7
@@ -467,14 +470,14 @@ public final class MiBotseMueve extends ObserverBot
         	else return 0;
         }
         
-    	private int getWeaponStats(int Index, int maxAmmo, int directDamage, int accuracy, int CD)
+    	private int [] getWeaponStats(int Index)
     	{
-    		PlayerGun gun = new PlayerGun();
-    		int res = Index;
-			CD = WEAPON_CDS[res-7];
-			maxAmmo = weaponsIndex[res-7][2];
-			directDamage = WEAPON_DAMAGE[res-7];
-			accuracy = WEAPON_ACCURACY[res-7];
+    		int maxAmmo = 0, directDamage = 1, accuracy = 2, CD = 3;
+    		int [] res = new int[4];
+			res[CD] = WEAPON_CDS[Index-7];
+			res[maxAmmo] = weaponsIndex[Index-7][2];
+			res[directDamage] = WEAPON_DAMAGE[Index-7];
+			res[accuracy] = WEAPON_ACCURACY[Index-7];
     		return res;
     	}
     	
@@ -516,10 +519,14 @@ public final class MiBotseMueve extends ObserverBot
     	}
     	private int getFuzzyValue(int weaponIndex,int maxAmmo, int directDamage, int accuracy, int CD, int enemyDistance){
     		int res = -1;
-    		System.out.println("FUZZYYYYYY! "+ weaponsIndex[weaponIndex-7][0]);
     		int actualAmmo;
+    		System.out.println("Arma = "+weaponIndex+"Tipo de municion "+ weaponsIndex[weaponIndex-7][0]);
+    		
+    		Inventory inv = world.getInventory();
     		if (weaponsIndex[weaponIndex-7][0] == -1) actualAmmo = -1;
-    		else actualAmmo = 100*getInventoryItemCount(weaponsIndex[weaponIndex-7][0])/maxAmmo;
+    		else{
+    				actualAmmo = 100*inv.getCount(weaponsIndex[weaponIndex-7][0])/maxAmmo;
+    		}
     		System.out.println("AMMOOOOO");
            // try {
             	//engine = new Rete();
@@ -622,19 +629,23 @@ public final class MiBotseMueve extends ObserverBot
         	getWeaponIndexes(weaponsVector);
         	System.out.println("VECTOR OBTENIDO");
         	System.out.println("TENGO "+weaponsVector.size()+" ARMAS");
-        	int maxAmmo = 0, directDamage = 0, accuracy = 0, CD = 0, weaponIndex; 
+        	int maxAmmo = 0, directDamage = 1, accuracy = 2, CD = 3, weaponIndex = 7; 
+        	int [] stats = new int[4];
         	System.out.println("PETADO?");
         	int [] preferencias = new int[weaponsVector.size()];
-        	
+        	int bestWeapon = 7;
         	for(int i=0;i<weaponsVector.size();i++){
         		System.out.println("FUZZY! " + i);
-        		weaponIndex = getWeaponStats(weaponsVector.get(i), maxAmmo, directDamage, accuracy, CD);
+
+        		weaponIndex = weaponsVector.get(i);
+        		stats = getWeaponStats(weaponsVector.get(i));
         		System.out.println("FUZZY2! " + i);
-            	preferencias[i] = getFuzzyValue(weaponIndex, maxAmmo, directDamage, accuracy, CD, 100);
+            	preferencias[i] = getFuzzyValue(weaponIndex, stats[maxAmmo], stats[directDamage], stats[accuracy], stats[CD], 100);
+            	if ((i!=0)&&(preferencias[i]>preferencias[i-1])) bestWeapon = weaponIndex;
             	System.out.println("TENGO "+weaponIndex+ " DCDA = "+ preferencias[i]);
         	}
         	
-        	return max(preferencias);
+        	return weaponIndex;
         }
         
         //Enemy tiene la entidad del enemigo
@@ -653,9 +664,9 @@ public final class MiBotseMueve extends ObserverBot
             
         */
         	
-        	/*AQUI ESTARIA BIEN QUE CAMBIARAMOS A NUESTRA MEJOR ARMA + MUNICION*/
         	System.out.println("DECIDING WEAPON");
-        	decideBestWeapon(player);
+        	int weapon = decideBestWeapon(player);
+        	this.changeWeaponByInventoryIndex(weapon);
         	System.out.println("WEAPON DECIDED");
         	return FIGHT;
             /*int res = -1;
@@ -762,7 +773,7 @@ public final class MiBotseMueve extends ObserverBot
         
         private int getLongTermGoalPath(Origin[] longTermGoalPath,Origin actualPos)
         {
-            System.out.println("getLongTermGOalPath");
+            //System.out.println("getLongTermGOalPath");
             Vector totalEntities = world.getEntities(false);
             Origin[] interestingEntities = new Origin[totalEntities.size()];
             int count = 0;
@@ -782,12 +793,12 @@ public final class MiBotseMueve extends ObserverBot
                 }
             }
 
-            System.out.println("YA LOS TENGO Y SON " + count);
+            //System.out.println("YA LOS TENGO Y SON " + count);
             int[] result = new int[count];
             this.theOriginOfSpecies(result,interestingEntities,actualPos,120, count,0.5);
-            System.out.println("RESULTADO");
-            for(int i=0;i<result.length;i++) System.out.print(result[i] + " ");
-            System.out.println("");
+            //System.out.println("RESULTADO");
+            //for(int i=0;i<result.length;i++) System.out.print(result[i] + " ");
+            //System.out.println("");
             for(int i=0;i<result.length;i++)
             {
                 longTermGoalPath[i] = new Origin(interestingEntities[result[i]].getX(),interestingEntities[result[i]].getY(),interestingEntities[result[i]].getZ());
@@ -846,34 +857,34 @@ public final class MiBotseMueve extends ObserverBot
             waypointDistances[nAttributes] = new WaypointDistances(actualPos,specimenAttributes,nAttributes,wpMap,true);
             getInitialSpecimenSet(specimenSet,nAttributes);
             System.out.println("specimenSet Inicial");
-            for(int i=0;i<population;i++)
+           /* for(int i=0;i<population;i++)
             {
                 for(int j=0;j<nAttributes;j++)
                 {
                     System.out.print(specimenSet[i][j] + " ");
                 }
                 System.out.println("");
-            }
+            }*/
             evalSpecimenSet(fitness,specimenSet,population,actualPos,specimenAttributes,nAttributes,waypointDistances); 
             System.out.println("fitness Inicial");
-            for(int i=0;i<population;i++)
+            /*for(int i=0;i<population;i++)
             {
                 System.out.println(fitness[i]);
-            }
+            }*/
             while(iterations < 100000)
             {
                 info = max(fitness);
        //         System.out.println("max = " + info[0]);
                 max = info[0];
                 getNaturalSelection(reproductionRate,fitness);
-                if(iterations == 0)
+                /*if(iterations == 0)
                 {
                     System.out.println("reproduction Rate");
                     for(int i=0;i<population;i++)
                     {
                         System.out.println(reproductionRate[i]);;
                     }
-                }
+                }*/
                 reproduceSpecimenSet(offsprings,specimenSet,reproductionRate);
        /*         System.out.println("descendientes");
                 for(int i=0;i<population;i++)
