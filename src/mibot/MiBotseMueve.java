@@ -408,8 +408,7 @@ public final class MiBotseMueve extends ObserverBot
             }
 
         }
-        
-        
+ 
         int GET_LIFE = 1;
         int GET_ARMOUR = 2;
              
@@ -521,8 +520,11 @@ public final class MiBotseMueve extends ObserverBot
     	}
     	private int getFuzzyValue(int weaponIndex,int maxAmmo, int directDamage, int accuracy, int CD, int enemyDistance){
     		int res = -1;
-    		int actualAmmo = 100*this.getInventoryItemCount(weaponsIndex[weaponIndex-7][0])/maxAmmo;
-    		
+    		System.out.println("FUZZYYYYYY! "+ weaponsIndex[weaponIndex-7][0]);
+    		int actualAmmo;
+    		if (weaponsIndex[weaponIndex-7][0] == -1) actualAmmo = -1;
+    		else actualAmmo = 100*getInventoryItemCount(weaponsIndex[weaponIndex-7][0])/maxAmmo;
+    		System.out.println("AMMOOOOO");
            // try {
             	//engine = new Rete();
                 //engine.batch(rutas.Jess2_path);
