@@ -70,6 +70,9 @@ public final class MiBotseMueve extends ObserverBot
         private String State = "Spawn";
         
         private Waypoint[] route;
+        private Waypoint[] rescueRoute = null;
+        private Waypoint[] helperRoute = null;
+        
         
         private int healthLowLimit = 40;
 
@@ -82,10 +85,11 @@ public final class MiBotseMueve extends ObserverBot
         
         Origin targetPos;
 
-        
-        static int [] allyStates = {0,0,0,0};
-        static Origin [] allyPositions = new Origin[4];
-        
+        private int ID;
+        static int [] botStates = {0,0,0,0};
+        static Origin [] botPositions = new Origin[4];
+        static int [] helpingIndex= new int[4];
+        static int nBots = 0;
         
 /*-------------------------------------------------------------------*/
 /**	Constructor que permite especificar el nombre y aspecto del bot
@@ -167,6 +171,10 @@ public final class MiBotseMueve extends ObserverBot
 	private void initBot()
 	{		
 		this.setCTFTeam(0);
+		ID = nBots;
+		nBots = nBots + 1;
+		botStates[ID] = LIVING;
+		helpingIndex[ID] = -1;
 		//Autorefresco del inventario
 		this.setAutoInventoryRefresh(true);
 
@@ -187,10 +195,12 @@ public final class MiBotseMueve extends ObserverBot
 	}
 
         //Distintos valores que puede dar decideBattle()
+		int LIVING = 0;
         int FIGHT = 1;
-        int CHASE = 2;
         int RUNAWAY = 3;
+        int HELPING = 4;
         
+        int botState = LIVING;
         //Posicion del objetivo a largo plazo
         Origin goalPos;
         
@@ -226,6 +236,7 @@ public final class MiBotseMueve extends ObserverBot
         int countGoalPath = 0;
         int lengthGoalPath;
         boolean enemyDead = false;        
+        int timeNoHelp = 0 ;
         
         public void runAI(World w)
 	{
@@ -323,7 +334,7 @@ public final class MiBotseMueve extends ObserverBot
                 lengthGoalPath = getLongTermGoalPath(longTermGoalPath,player.getPosition());
                 countGoalPath = 0;
             }
-            
+            botPositions[ID] = player.getPosition();
             int battleStrategy;
             Vector3f aim = new Vector3f(0,0,0);
             targetPos = new Origin(0,0,0);
@@ -334,21 +345,45 @@ public final class MiBotseMueve extends ObserverBot
             if(((enemy = this.visibleEnemy(player.getPosition(),mibsp, opponents, aim)) != null)&&((battleStrategy = decideBattle())!=0))
             {
 
-                System.out.println("VISIBLE");
-                
+               
+                helpingIndex[ID] = -1;
 
                 System.out.println("BATTLE = "+battleStrategy);
-                //if(battleStrategy == FIGHT)
-                //{
+                if(battleStrategy == FIGHT)
+                {
+                	System.out.println(ID+" I'M FIGHTING!");
                     //Perseguir
+                	botState = FIGHT;
+                	botStates[ID] = FIGHT;
                     this.chaseEnemy();          
                     goal = false;
-                //}
-               //if(battleStrategy == RUNAWAY)
-                //{
-                    //Huir
-                    
-                //}
+                }
+                if(battleStrategy == RUNAWAY)
+                {
+                    //Huir al aliado más cercano
+                	System.out.println(ID+" I'M RINNING AWAY");
+                	int helper = getClosestHelper();
+                	if (helper != -1){
+                		//Ir a la posicion del "helper"
+                    	botState = RUNAWAY;
+                    	helperRoute = this.findShortestPath(botPositions[helper]);
+                    	makeMove(player.getPosition(),helperRoute[0].getPosition().toOrigin(),null);
+                	}
+                	else {
+                		timeNoHelp++;
+                		if (timeNoHelp > 10){
+                    		botState = FIGHT;
+                        	botStates[ID] = FIGHT;
+                        	timeNoHelp = 0;
+                            this.chaseEnemy();
+                		}
+                		else {
+                			//Huir a donde???
+                		}
+                	}
+                	goal = false;
+                	
+                }
             }
             //No hay enemigo visible
             else
@@ -366,10 +401,21 @@ public final class MiBotseMueve extends ObserverBot
                     if(route == null) routeLength = 0;
                     else routeLength = route.length;
                 }
-                else*/ if(!goal)
+                else*/
+                helpingIndex[ID] = -1;
+                int allyInTrouble = -1;
+                if ((allyInTrouble = checkAllyStatus()) != -1){
+                	System.out.println(ID + "ONMW TO RESCUE YOU "+allyInTrouble);
+                	helpingIndex[ID] = allyInTrouble;
+                	botState = HELPING;
+                	rescueRoute = this.findShortestPath(botPositions[allyInTrouble]);
+                	makeMove(player.getPosition(),rescueRoute[0].getPosition().toOrigin(),null);
+                }
+                else if(!goal)
                 {
+                	botState = LIVING;
                     actualWayPoint = 0;
-                    System.out.println("OBJETIVO = " + longTermGoalPath[countGoalPath].getX() + " " + longTermGoalPath[countGoalPath].getY() + " "+ longTermGoalPath[countGoalPath].getZ());
+                    //System.out.println("OBJETIVO = " + longTermGoalPath[countGoalPath].getX() + " " + longTermGoalPath[countGoalPath].getY() + " "+ longTermGoalPath[countGoalPath].getZ());
                     route = this.findShortestPath(longTermGoalPath[countGoalPath]);
                     if(route == null) routeLength = 0;
                     else routeLength = route.length;
@@ -378,6 +424,7 @@ public final class MiBotseMueve extends ObserverBot
                 }
                 if(routeLength > 0)
                 {
+                	botState = LIVING;
                     //Obtener el siguiente wayPoint
                     nextWayPoint.setX((int)route[actualWayPoint].getPosition().x);
                     nextWayPoint.setY((int)route[actualWayPoint].getPosition().y);
@@ -389,6 +436,7 @@ public final class MiBotseMueve extends ObserverBot
                 }               
                 if((arrived==1)||(routeLength == 0))
                 {
+                	botState = LIVING;
                     //System.out.println("LLEGO" + actualWayPoint + " " + routeLength);
                     if(actualWayPoint < routeLength - 1) actualWayPoint++;
                     else 
@@ -404,8 +452,43 @@ public final class MiBotseMueve extends ObserverBot
             }
 
         }
+        private double euclideanDistance(Origin o1,Origin o2)
+        {
+            return Math.sqrt((o1.getX()-o2.getX())*(o1.getX()-o2.getX())+(o1.getY()-o2.getY())*(o1.getY()-o2.getY()));
+        }
         
-                     
+        int checkAllyStatus(){
+        	int res = -1;
+        	double distance = Double.MAX_VALUE;
+        	for (int i=0;i<nBots;i++){
+        		if (i == ID) continue;
+        		if ((botStates[i] == FIGHT)||(botStates[i]==RUNAWAY)){
+        			double aux = euclideanDistance(this.getPosition(),botPositions[i]);
+        			if (distance > aux){
+        				res = i;
+        				distance = aux;
+        			}
+        		}
+        	}
+        	return res;
+        }
+        
+        int getClosestHelper(){
+        	int res = -1;
+        	double distance = Double.MAX_VALUE;
+        	for (int i=0;i<nBots;i++){
+        		if (i == ID) continue;
+        		if (helpingIndex[i] == ID){
+        			double aux = euclideanDistance(this.getPosition(),botPositions[i]);
+        			if (distance > aux){
+        				res = i;
+        				distance = aux;
+        			}
+        		}
+        	}
+        	return res;
+        }
+        
         //Establece la direccion de movimiento y devuelve si se ha llegado
         //al objetivo o no
         private int makeMove(Origin sourcePos,Origin targetPos,Vector3f aim)
@@ -915,11 +998,7 @@ public final class MiBotseMueve extends ObserverBot
 
         }*/
         
-        private double euclideanDistance(Origin o1,Origin o2)
-        {
-            return Math.sqrt((o1.getX()-o2.getX())*(o1.getX()-o2.getX())+(o1.getY()-o2.getY())*(o1.getY()-o2.getY()));
-        }
-        
+
         
         
         
