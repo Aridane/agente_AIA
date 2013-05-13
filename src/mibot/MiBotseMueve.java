@@ -167,6 +167,7 @@ public final class MiBotseMueve extends ObserverBot
 	private void initBot()
 	{		
 		this.setCTFTeam(0);
+
 		//Autorefresco del inventario
 		this.setAutoInventoryRefresh(true);
 
@@ -226,6 +227,7 @@ public final class MiBotseMueve extends ObserverBot
         int countGoalPath = 0;
         int lengthGoalPath;
         boolean enemyDead = false;        
+        Origin antPos = new Origin();
         
         public void runAI(World w)
 	{
@@ -233,13 +235,20 @@ public final class MiBotseMueve extends ObserverBot
             
             if (mibsp==null) mibsp = new BSPParser(rutas.BSP_path);
 
+            
             world = w;
             player = world.getPlayer();
             
-           
+            if(this.euclideanDistance(antPos, player.getPosition()) > 50)
+            {
+                countGoalPath = 0;
+                goal = false;
+            }
             
-            Vector items = world.getItems();
-            enemy = world.getOpponentByName("Player");
+            antPos.setX(player.getPosition().getX());
+            antPos.setY(player.getPosition().getY());
+            antPos.setZ(player.getPosition().getZ());
+            
 
             Vector opponents = world.getOpponents(true);
 
