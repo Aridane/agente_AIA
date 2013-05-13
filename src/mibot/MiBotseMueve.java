@@ -83,7 +83,7 @@ public final class MiBotseMueve extends ObserverBot
         Origin targetPos;
 
         
-        static int [] allyStates = {};
+        static int [] allyStates = {0,0,0,0};
         static Origin [] allyPositions = new Origin[4];
         
         
@@ -166,6 +166,7 @@ public final class MiBotseMueve extends ObserverBot
 	//InicializaciÃ³n del bot
 	private void initBot()
 	{		
+		this.setCTFTeam(0);
 		//Autorefresco del inventario
 		this.setAutoInventoryRefresh(true);
 
@@ -337,30 +338,21 @@ public final class MiBotseMueve extends ObserverBot
                 
 
                 System.out.println("BATTLE = "+battleStrategy);
- /*               if(battleStrategy == FIGHT)
-                {
-                    //Atacar
-                    Vector3f mov = new Vector3f(0,0,0);
-                    aim = new Vector3f(enemy.getOrigin().getX() - player.getPosition().getX(),enemy.getOrigin().getY() - player.getPosition().getY(),enemy.getOrigin().getZ() - player.getPosition().getZ());
-                    this.setBotMovement(mov, aim, 100, PlayerMove.POSTURE_NORMAL);
-                    setAction(Action.ATTACK, true);
-                }*/
-//                if(battleStrategy == CHASE)
- //               {
+                //if(battleStrategy == FIGHT)
+                //{
                     //Perseguir
                     this.chaseEnemy();          
                     goal = false;
-  //              }
-/*                if(battleStrategy == RUNAWAY)
-                {
+                //}
+               //if(battleStrategy == RUNAWAY)
+                //{
                     //Huir
                     
-                }*/
+                //}
             }
             //No hay enemigo visible
             else
             {
-            	System.out.println("NO HAY ENEMIGO VISIBLE");
                 setAction(Action.ATTACK, false);
                 //Si ya se ha cumplido el objetivo o es el principio obtenemos uno nuevo
       /*          if(lowHealth())
@@ -457,6 +449,7 @@ public final class MiBotseMueve extends ObserverBot
             for(int i=0;i<opponents.size();i++)
             {
                 enemy = (Entity)opponents.get(i);
+                if (enemy.getCTFTeamNumber() == this.getCTFTeamNumber()) continue;
                 aimEnemy.set(enemy.getOrigin().getX()-playerPos.getX(), enemy.getOrigin().getY()-playerPos.getY(), enemy.getOrigin().getZ()-playerPos.getZ());
                 aimEnemy.angle(aim);
                 if((aimEnemy.angle(aim) < 90) && (bsp.isVisible(playerPos.toVector3f(), enemy.getOrigin().toVector3f())))
