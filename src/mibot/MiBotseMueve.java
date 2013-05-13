@@ -82,6 +82,11 @@ public final class MiBotseMueve extends ObserverBot
         
         Origin targetPos;
 
+        
+        static int [] allyStates = {};
+        static Origin [] allyPositions = new Origin[4];
+        
+        
 /*-------------------------------------------------------------------*/
 /**	Constructor que permite especificar el nombre y aspecto del bot
  *	@param botName Nombre del bot durante el juego
