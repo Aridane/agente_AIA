@@ -266,79 +266,6 @@ public final class MiBotseMueve extends ObserverBot
 
             Vector opponents = world.getOpponents(true);
 
-			
-                /* if(hasRoute==0)
-                {
-                    hasRoute = 1; 
-                    route = findShortestPathToWeapon(null);
-                    routeLength = route.length;
-
-
-                }*/
-
-
-           /* targetPos = new Origin();
- 
-
-            Vector3f mov = new Vector3f(0,0,0);
-            Vector3f aim = new Vector3f(-1,0.0001,0.0001);
-                
-            if(enemy == null)
-            {
-                this.setBotMovement(mov, aim, 100, PlayerMove.POSTURE_NORMAL);
-                System.out.println(this.getName() + " no hay enemigos");
-            }
-            else 
-            {
-                System.out.println("enemy antes = " + enemyPos.getX() + " " + enemyPos.getY() + " " + enemyPos.getZ());
-                System.out.println("enemy ahora = " + enemy.getOrigin().getX() + " " + enemy.getOrigin().getY() + " " + enemy.getOrigin().getZ());
-                //Si el enemigo se ha movido
-                if((enemy.getOrigin().getX() != enemyPos.getX()) || (enemy.getOrigin().getY() != enemyPos.getY()) || (enemy.getOrigin().getZ() != enemyPos.getZ()))
-                {
-                    System.out.println("nueva ruta");
-                    actualWayPoint = 0;
-                    //Obtenemos la nueva ruta
-                    route = this.findShortestPath(enemy.getOrigin());
-                    routeLength = route.length;
-                    System.out.println("ruta = " + routeLength);
-                    enemyPos.setX(enemy.getOrigin().getX());
-                    enemyPos.setY(enemy.getOrigin().getY());
-                    enemyPos.setZ(enemy.getOrigin().getZ());
-                }
-                else System.out.println("vieja ruta");
-                targetPos.setX((int)route[actualWayPoint].getPosition().x);
-                targetPos.setY((int)route[actualWayPoint].getPosition().y);
-                targetPos.setZ((int)route[actualWayPoint].getPosition().z);                   
-                arrived = makeMove(player.getPosition(),targetPos);
-  
-                if(arrived==1) 
-                {
-                    if(actualWayPoint < routeLength - 1) actualWayPoint++;
-                }
-   //             System.out.println(this.getName() + "Enemigo = " +enemy.getOrigin().getX() +  " " + enemy.getOrigin().getY() + " " + enemy.getOrigin().getZ());
-                Vector3f vecPlay = new Vector3f(player.getPosition());
-                Vector3f vecEne = new Vector3f(enemy.getOrigin());
-  //              System.out.println("BOT = " + vecPlay.x + " " + vecPlay.y + " " + vecPlay.z);
-  //              System.out.println("ENEMIGO = " + vecEne.x + " " + vecEne.y + " " + vecEne.z);
-                //Si es visible ataca
-                aim.set(targetPos.getX()-player.getPosition().getX(), targetPos.getY()-player.getPosition().getY(), targetPos.getZ()-player.getPosition().getZ());
-                if(this.enemyVisible(player.getPosition(),mibsp, opponents, aim)!=null)
-                {
-                    aim = new Vector3f(enemy.getOrigin().getX() - player.getPosition().getX(),enemy.getOrigin().getY() - player.getPosition().getY(),enemy.getOrigin().getZ() - player.getPosition().getZ());
-                    this.setBotMovement(mov, aim, 100, PlayerMove.POSTURE_NORMAL);
-                    setAction(Action.ATTACK, true);
-     //                   System.out.println("VISIBLE");
-                }
-                else 
-                {
-                    // this.setBotMovement(mov, aim, 100, PlayerMove.POSTURE_NORMAL);
-                    setAction(Action.ATTACK, false);
-                }
-
-
-            }*/
-
-            //CÃ³digo automata
             
             if(longTermGoalPath == null)
             {
@@ -372,7 +299,7 @@ public final class MiBotseMueve extends ObserverBot
                 }
                 if(battleStrategy == RUNAWAY)
                 {
-                    //Huir al aliado más cercano
+                    //Huir al aliado mï¿½s cercano
                 	System.out.println(ID+" I'M RINNING AWAY");
                 	int helper = getClosestHelper();
                 	if (helper != -1){
@@ -544,7 +471,7 @@ public final class MiBotseMueve extends ObserverBot
             for(int i=0;i<opponents.size();i++)
             {
                 enemy = (Entity)opponents.get(i);
-                if (enemy.getCTFTeamNumber() == this.getCTFTeamNumber()) continue;
+                if (enemy.getName().contains("[Olimpus]")) continue;
                 aimEnemy.set(enemy.getOrigin().getX()-playerPos.getX(), enemy.getOrigin().getY()-playerPos.getY(), enemy.getOrigin().getZ()-playerPos.getZ());
                 aimEnemy.angle(aim);
                 if((aimEnemy.angle(aim) < 90) && (bsp.isVisible(playerPos.toVector3f(), enemy.getOrigin().toVector3f())))

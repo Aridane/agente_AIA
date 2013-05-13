@@ -39,10 +39,10 @@ public class MiBot {
 		//System.setProperty("QUAKE2", quake2_path); 
 
 		//CreaciÃ³n del bot (pueden crearse mÃºltiples bots)
-		MiBot = new MiBotseMueve("Venus0","female/athena");
-		MiBot2 = new MiBotseMueve("Venus1","female/athena");
-		MiBot3 = new MiBotseMueve("Marte0","male/athena");
-		MiBot4 = new MiBotseMueve("Marte1","male/athena");
+		MiBot = new MiBotseMueve("[Olimpus] Venus","female/athena");
+		MiBot2 = new MiBotseMueve("[Olimpus] Juno","female/athena");
+		MiBot3 = new MiBotseMueve("[Olimpus] Marte","male/athena");
+		MiBot4 = new MiBotseMueve("[Olimpus] Jupiter","male/athena");
        //         MiBot2 = new MiBotseMueve("Marte","male/athena");
 
 		MiBot.setMap(WaypointMapGenerator.generate(rutas.Map_path, (float)0.2)); 
