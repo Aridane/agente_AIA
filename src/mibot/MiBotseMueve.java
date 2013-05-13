@@ -320,7 +320,7 @@ public final class MiBotseMueve extends ObserverBot
             nextWayPoint = new Origin(0,0,0);
 
             aim.set(targetPos.getX()-player.getPosition().getX(), targetPos.getY()-player.getPosition().getY(), targetPos.getZ()-player.getPosition().getZ());
-            if(this.enemyVisible(player.getPosition(),mibsp, opponents, aim)!=null)
+            if((enemy = this.visibleEnemy(player.getPosition(),mibsp, opponents, aim)) != null)
             {
 
                 System.out.println("VISIBLE");
@@ -341,23 +341,23 @@ public final class MiBotseMueve extends ObserverBot
                 if(battleStrategy == CHASE)
                 {
                     //Perseguir
-                    
+                    this.chaseEnemy();          
+                    goal = false;
                 }
                 if(battleStrategy == RUNAWAY)
                 {
                     //Huir
                     
                 }
-                seen = true;
             }
             //No hay enemigo visible
             else
             {
                 setAction(Action.ATTACK, false);
                 //Si ya se ha cumplido el objetivo o es el principio obtenemos uno nuevo
-                if(seen)
+      /*          if(lowHealth())
                 {
-                    seen = false;
+                    System.out.println("A POR VIDA");
                     shortTermGoal = true;
                     actualWayPoint = 0;
                     goalPos = decideShortTermGoal();
@@ -366,7 +366,7 @@ public final class MiBotseMueve extends ObserverBot
                     if(route == null) routeLength = 0;
                     else routeLength = route.length;
                 }
-                else if(!goal)
+                else*/ if(!goal)
                 {
                     actualWayPoint = 0;
                     System.out.println("OBJETIVO = " + longTermGoalPath[countGoalPath].getX() + " " + longTermGoalPath[countGoalPath].getY() + " "+ longTermGoalPath[countGoalPath].getZ());
@@ -385,7 +385,7 @@ public final class MiBotseMueve extends ObserverBot
                 
                     //System.out.println("SIG = " + nextWayPoint.getX() + " " + nextWayPoint.getY() + " "+ nextWayPoint.getZ());
                 
-                    arrived = makeMove(player.getPosition(),nextWayPoint);
+                    arrived = makeMove(player.getPosition(),nextWayPoint,null);
                 }               
                 if((arrived==1)||(routeLength == 0))
                 {
@@ -406,13 +406,35 @@ public final class MiBotseMueve extends ObserverBot
         }
         
         
+        private void chaseEnemy()
+        {
+            Vector3f aim = new Vector3f();
+            setAction(Action.ATTACK, true);
+            while((enemy = this.visibleEnemy(player.getPosition(),mibsp, aim)) != null)
+            {
+                System.out.println("PERSIGUIENDO");
+                this.getAimingVector(aim,enemy.getOrigin());
+                this.makeMove(player.getPosition(), enemy.getOrigin(), aim);
+            } 
+        }
+        
+        private boolean lowHealth()
+        {
+            if(player.getHealth() < 60) return true;
+            else return false;
+        }
+        
         int GET_LIFE = 1;
         int GET_ARMOUR = 2;
              
         //Decide el objetivo a largo plazo
         private Origin decideShortTermGoal()
         {
-            int res = -1;
+            int[] entitiesToGet = {Inventory.HEALTH};
+            Entity[] entities = world.getEntities(entitiesToGet);
+            Entity closestEntity = getClosestEntity(entities);
+            return closestEntity.getOrigin();
+            /*int res = -1;
             try {
 
 		engine = new Rete();
@@ -453,11 +475,38 @@ public final class MiBotseMueve extends ObserverBot
                 return this.findClosestItem(Inventory.ARMOR_SHARD).getPosition().toOrigin();
             }
 
-            return this.findClosestItem(Inventory.JACKET_ARMOR).getPosition().toOrigin();
+            return this.findClosestItem(Inventory.JACKET_ARMOR).getPosition().toOrigin();*/
 
         }
         
-
+        private Entity getClosestEntity(Entity[] entities)
+        {
+            double min = 1000000;
+            int index = 0;
+            double wayDist;
+            for(int i=0;i<entities.length;i++)
+            {
+                if((wayDist = waypointDistance(this.findShortestPath(entities[i].getOrigin()))) < min)
+                {
+                    min = wayDist;
+                    index = i;
+                }
+            }
+            return entities[index];
+        }
+        
+        private double waypointDistance(Waypoint[] way)
+        {
+            double acum = this.euclideanDistance(player.getPosition(),way[0].getPosition().toOrigin());
+            for(int i=0;i<way.length;i++)
+            {
+                if(i<way.length - 1)
+                {
+                    acum = acum + euclideanDistance(way[i].getPosition().toOrigin(),way[i+1].getPosition().toOrigin());
+                }
+            }
+            return acum;
+        }
         
         private Origin getClosestItemLocation(int itemIndex) {
             return null;
@@ -1343,7 +1392,7 @@ public final class MiBotseMueve extends ObserverBot
                      
         //Establece la direccion de movimiento y devuelve si se ha llegado
         //al objetivo o no
-        private int makeMove(Origin sourcePos,Origin targetPos)
+        private int makeMove(Origin sourcePos,Origin targetPos,Vector3f aim)
         {
             //Obtener la diferencia
             int X = targetPos.getX() - sourcePos.getX();
@@ -1363,14 +1412,21 @@ public final class MiBotseMueve extends ObserverBot
             Vector3f dirMov = new Vector3f(0,0,0);
             dirMov.set((int)stepX,(int)stepY,0);
 
-            setBotMovement(dirMov, dirMov, 1, PlayerMove.POSTURE_NORMAL);
+            if(aim != null) setBotMovement(dirMov, aim, 1, PlayerMove.POSTURE_NORMAL);
+            else setBotMovement(dirMov, dirMov, 1, PlayerMove.POSTURE_NORMAL);
+            
             if((X <= 50) && (X >= -50) && (Y <= 50) && (Y >= -50)) return 1;
             else return 0;
         }
         
-        private Origin enemyVisible(Origin playerPos,BSPParser bsp,Vector opponents,Vector3f aim)
+        
+        private void getAimingVector(Vector3f aimingVector,Origin enemyPos)
         {
-            Entity enemy;
+            aimingVector.set(new Vector3f(enemyPos.getX() - player.getPosition().getX(),enemyPos.getY() - player.getPosition().getY(),enemyPos.getZ() - player.getPosition().getZ()));
+        }
+        
+        private Entity visibleEnemy(Origin playerPos,BSPParser bsp,Vector opponents,Vector3f aim)
+        {
             Vector3f aimEnemy = new Vector3f();
             for(int i=0;i<opponents.size();i++)
             {
@@ -1379,78 +1435,41 @@ public final class MiBotseMueve extends ObserverBot
                 aimEnemy.angle(aim);
                 if((aimEnemy.angle(aim) < 90) && (bsp.isVisible(playerPos.toVector3f(), enemy.getOrigin().toVector3f())))
                 {
-                    return enemy.getOrigin();
+                    return enemy;
                 }
             }
             return null;
         }
                      
-	private void EstableceDirMovimiento() throws IOException
-	{
-		//Mostrar posiciÃ³n del bot
-		//System.out.println("PosiciÃ³n actual: ("+player.getPlayerMove().getOrigin().getX()+","+
-//				player.getPlayerMove().getOrigin().getY()+","+
-//				player.getPlayerMove().getOrigin().getZ()+")");	
-		
-                
-		Vector3f DirMov = new Vector3f(vel_x,vel_y, 0);
-		Vector3f aim = new Vector3f(aim_x,aim_y,aim_z);	
-		//Comanda el movimiento, si el segundo parÃ¡metro es null mira al destino, 
-		//en otro caso mira en la direcciÃ³n indicada
-		setBotMovement(DirMov, aim, 200, PlayerMove.POSTURE_NORMAL);
-                if(contador == 10) 
-                 {
-                     contador = 0;
-                     if(vel_y == 1)
-                     {
-                         vel_y = 0;
-                         vel_x = 1;
-                     }
-                     else if(vel_y == 0)
-                     {
-                         if(vel_x == 1)
-                         {
-                             vel_y = -1;
-                             vel_x = 0;
-                         }
-                         else
-                         {
-                             vel_y = 1;
-                             vel_x = 0;
-                         }
-                     }
-                     else
-                     {
-                         vel_y = 0;
-                         vel_x = -1;
-                     }
-                     if(aim_x==1.) 
-                     {
-                         aim_x=0.0001;
-                         aim_y=-1;
-                     }
-                     else if(aim_x == 0.0001)
-                     {
-                         if(aim_y==1)
-                         {
-                             aim_x=1;
-                             aim_y=0.0001;
-                         }
-                         else
-                         {
-                             aim_x=-1;
-                             aim_y=0.0001;
-                         }
-                     }
-                     else if(aim_x==-1.) 
-                     {
-                         aim_x = 0.0001;
-                         aim_y = 1;
-                     }
-                 }
-                 contador++;
-	}
-	
+        private Entity visibleEnemy(Origin playerPos,BSPParser bsp,Vector3f aim)
+        {
+            Vector3f aimEnemy = new Vector3f();
+            aimEnemy.set(enemy.getOrigin().getX()-playerPos.getX(), enemy.getOrigin().getY()-playerPos.getY(), enemy.getOrigin().getZ()-playerPos.getZ());
+            aimEnemy.angle(aim);
+            if((aimEnemy.angle(aim) < 90) && (bsp.isVisible(playerPos.toVector3f(), enemy.getOrigin().toVector3f())))
+            {
+                return enemy;
+            }
+            return null;
+        }
+        
+        
+        private int getNumberVisibleEnemies(Origin playerPos,BSPParser bsp,Vector opponents,Vector3f aim)
+        {
+            Vector3f aimEnemy = new Vector3f();
+            int n = 0;
+            for(int i=0;i<opponents.size();i++)
+            {
+                enemy = (Entity)opponents.get(i);
+                aimEnemy.set(enemy.getOrigin().getX()-playerPos.getX(), enemy.getOrigin().getY()-playerPos.getY(), enemy.getOrigin().getZ()-playerPos.getZ());
+                aimEnemy.angle(aim);
+                if((aimEnemy.angle(aim) < 90) && (bsp.isVisible(playerPos.toVector3f(), enemy.getOrigin().toVector3f())))
+                {
+                    n++;
+                }
+            }
+            return n;
+        }
 	/*-------------------------------------------------------------------*/
 	/**	Rutina que chequea las armas disponibles					     */
 	/**	Cada arma tiene un tipo de municiÃ³n. La cantidad de municiÃ³n se  */
