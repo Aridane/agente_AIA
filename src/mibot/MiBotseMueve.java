@@ -31,26 +31,16 @@ public final class MiBotseMueve extends ObserverBot
 	private Player player = null;
     private Proxy proxy = new Proxy();
 	
-        private Rutas rutas = new Rutas();
-        
-        private Vector3f PosPlayer= new Vector3f(0, 0, 0);
-	
-	//Variable que almacena la posiciÃ³n previa del jugador en 3D, inicializada en 0,0,0
-	private Vector3f prevPosPlayer = new Vector3f(0, 0, 0);
-	
-	//Variable que nos permiten ajustar la lÃ³gica y velocidad del movimiento del bot
-	private int nsinavanzar = 0, velx = 50 ,vely = 50, cambios = 0;
+    private Rutas rutas = new Rutas();
 	
 	//Acceso a la informaciÃ³n del entorno
 	private BSPParser mibsp = null;
-	
-	// Distancia al enemigo que estamos atacando
-	private float distanciaEnemigo = Float.MAX_VALUE;
 	
 	final int BLASTER = 7, SHOTGUN = 8, SUPER_SHOTGUN = 9,
 			MACHINEGUN = 10, CHAINGUN = 11, GRENADES = 12, GRENADE_LAUNCHER = 13,
 			ROCKET_LAUNCHER = 14, HYPERBLASTER = 15, RAILGUN = 16, BFG10K = 17,
 			SHELLS = 18, BULLETS = 19, CELLS = 20, ROCKETS = 21, SLUGS = 22;
+	
 	//Para consultar se accede con (arma - 7);
 	final int[] WEAPON_CDS = { 4, 11, 11, 0, 0, 13, 11, 8, 0, 15, 24 };
 	//Hay que tener en cuenta que la escopeta lanza 12 balas
@@ -66,12 +56,10 @@ public final class MiBotseMueve extends ObserverBot
 	
 	// Motor de inferencia
 	private Rete engine;
-        //Spawn, SeekItem, Battle_Chase, Battle_Retreat, Battle_Engage
-        private String State = "Spawn";
         
         private Waypoint[] route;
         private Waypoint[] rescueRoute = null;
-        private Waypoint[] helperRoute = null;
+        //private Waypoint[] helperRoute = null;
         
         
         private int healthLowLimit = 40;
@@ -202,6 +190,7 @@ public final class MiBotseMueve extends ObserverBot
         int HELPING = 4;
         
         int botState = LIVING;
+        
         //Posicion del objetivo a largo plazo
         Origin goalPos;
         
@@ -219,6 +208,7 @@ public final class MiBotseMueve extends ObserverBot
         int actualRescueWayPoint = 0;
         int arrived = 0;
         int rescueArrived = 0;
+        int runAwayTicks = 0;
         Origin enemyPos = new Origin(0,0,0);
 /*-------------------------------------------------------------------*/
 /**	Rutina central del agente para especificar su comportamiento
@@ -284,14 +274,12 @@ public final class MiBotseMueve extends ObserverBot
 
             aim.set(targetPos.getX()-player.getPosition().getX(), targetPos.getY()-player.getPosition().getY(), targetPos.getZ()-player.getPosition().getZ());
 
-            if(((enemy = this.visibleEnemy(player.getPosition(),mibsp, opponents, aim)) != null)&&((battleStrategy = decideBattle())!=0))
+            if((botState != RUNAWAY)&&((enemy = this.visibleEnemy(player.getPosition(),mibsp, opponents, aim)) != null)&&((battleStrategy = decideBattle())!=0))
             {
-
-               
                 helpingIndex[ID] = -1;
 
                 System.out.println("BATTLE = "+battleStrategy);
-                /*if(battleStrategy == FIGHT)
+                if(battleStrategy == FIGHT)
                 {
                 	System.out.println(ID+"-> I'M FIGHTING!");
                     //Perseguir
@@ -301,11 +289,12 @@ public final class MiBotseMueve extends ObserverBot
                     goal = false;
                 }
                 if(battleStrategy == RUNAWAY)
-                {*/
+                {
                     //Huir al aliado m�s cercano
-                	System.out.println(ID+"-> I'M RINNING AWAY");
+                	System.out.println(ID+"-> I'M RUNNING AWAY");
                 	botState = RUNAWAY;
                 	botStates[ID] = RUNAWAY;
+                	
                 	/*int helper = getClosestHelper();
                 	if (helper != -1){
                 		//Ir a la posicion del "helper"
@@ -328,12 +317,19 @@ public final class MiBotseMueve extends ObserverBot
                 	}*/
                 	goal = false;
                 	
-                //}
+                }
             }
             //No hay enemigo visible
             else
             {
                 setAction(Action.ATTACK, false);
+            	if (botState == RUNAWAY){
+            		runAwayTicks++;
+            	}
+            	if (runAwayTicks > 30){
+            		botState = LIVING;
+            		botStates[ID] = LIVING;
+            	}
                 //Si ya se ha cumplido el objetivo o es el principio obtenemos uno nuevo
       /*          if(lowHealth())
                 {
@@ -349,7 +345,7 @@ public final class MiBotseMueve extends ObserverBot
                 else*/
                 helpingIndex[ID] = -1;
                 int allyInTrouble = -1;
-                if ((allyInTrouble = checkAllyStatus()) != -1){
+                if ((botState!=RUNAWAY)&&(allyInTrouble = checkAllyStatus()) != -1){
                 	System.out.println(ID + " -> ONMW TO RESCUE YOU "+allyInTrouble);
                 	helpingIndex[ID] = allyInTrouble;
                 	if (botState != HELPING){
@@ -380,8 +376,8 @@ public final class MiBotseMueve extends ObserverBot
                 }
                 else if(!goal)
                 {
-                	botState = LIVING;
-                	botStates[ID] = LIVING;
+                	if (botState!=RUNAWAY) botState = LIVING;
+                	if (botState!=RUNAWAY)botStates[ID] = LIVING;
                     actualWayPoint = 0;
                     //System.out.println("OBJETIVO = " + longTermGoalPath[countGoalPath].getX() + " " + longTermGoalPath[countGoalPath].getY() + " "+ longTermGoalPath[countGoalPath].getZ());
                     route = this.findShortestPath(longTermGoalPath[countGoalPath]);
@@ -392,8 +388,8 @@ public final class MiBotseMueve extends ObserverBot
                 }
                 if(routeLength > 0)
                 {
-                	botState = LIVING;
-                	botStates[ID] = LIVING;
+                	if (botState!=RUNAWAY)botState = LIVING;
+                	if (botState!=RUNAWAY)botStates[ID] = LIVING;
                     //Obtener el siguiente wayPoint
                     nextWayPoint.setX((int)route[actualWayPoint].getPosition().x);
                     nextWayPoint.setY((int)route[actualWayPoint].getPosition().y);
@@ -405,8 +401,8 @@ public final class MiBotseMueve extends ObserverBot
                 }               
                 if((arrived==1)||(routeLength == 0))
                 {
-                	botState = LIVING;
-                	botStates[ID] = LIVING;
+                	if (botState!=RUNAWAY)botState = LIVING;
+                	if (botState!=RUNAWAY)botStates[ID] = LIVING;
                     //System.out.println("LLEGO" + actualWayPoint + " " + routeLength);
                     if(actualWayPoint < routeLength - 1) actualWayPoint++;
                     else 
@@ -823,6 +819,7 @@ public final class MiBotseMueve extends ObserverBot
         }
         float weaponValueLowLimit = 0;
         float weaponValueHighLimit = 10;
+        
         //Enemy tiene la entidad del enemigo
         private int decideBattle()
         {
