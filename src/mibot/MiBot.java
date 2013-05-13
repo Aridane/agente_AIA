@@ -41,21 +41,21 @@ public class MiBot {
 		//CreaciÃ³n del bot (pueden crearse mÃºltiples bots)
 		MiBot = new MiBotseMueve("[Olimpus] Venus","female/athena");
 		MiBot2 = new MiBotseMueve("[Olimpus] Juno","female/athena");
-		MiBot3 = new MiBotseMueve("[Olimpus] Marte","male/athena");
-		MiBot4 = new MiBotseMueve("[Olimpus] Jupiter","male/athena");
+		//MiBot3 = new MiBotseMueve("[Olimpus] Marte","male/athena");
+		//MiBot4 = new MiBotseMueve("[Olimpus] Jupiter","male/athena");
        //         MiBot2 = new MiBotseMueve("Marte","male/athena");
 
 		MiBot.setMap(WaypointMapGenerator.generate(rutas.Map_path, (float)0.2)); 
 		MiBot2.setMap(WaypointMapGenerator.generate(rutas.Map_path, (float)0.2)); 
-		MiBot3.setMap(WaypointMapGenerator.generate(rutas.Map_path, (float)0.2)); 
-		MiBot4.setMap(WaypointMapGenerator.generate(rutas.Map_path, (float)0.2)); 
+		//MiBot3.setMap(WaypointMapGenerator.generate(rutas.Map_path, (float)0.2)); 
+		//MiBot4.setMap(WaypointMapGenerator.generate(rutas.Map_path, (float)0.2)); 
        //         MiBot2.setMap(WaypointMapGenerator.generate(rutas.Map_path, (float)0.2)); 
                 //Conecta con el localhost (el servidor debe estar ya lanzado para que se produzca la conexiÃ³n)
                 
 		MiBot.connect(getIpAddress(),27910);//Ejemplo de conexiÃ³n a la mÃ¡quina local
 		MiBot2.connect(getIpAddress(),27910);
-		MiBot3.connect(getIpAddress(),27910);
-		MiBot4.connect(getIpAddress(),27910);
+		//MiBot3.connect(getIpAddress(),27910);
+		//MiBot4.connect(getIpAddress(),27910);
 
                 System.out.println("Connection State: ");
                 System.out.println(MiBot.isConnected());

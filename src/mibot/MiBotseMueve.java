@@ -170,7 +170,6 @@ public final class MiBotseMueve extends ObserverBot
 	//InicializaciÃ³n del bot
 	private void initBot()
 	{		
-		this.setCTFTeam(0);
 
 		ID = nBots;
 		nBots = nBots + 1;
@@ -211,11 +210,15 @@ public final class MiBotseMueve extends ObserverBot
         
         //Posicion del siguiente waypoint al que ir
         Origin nextWayPoint;
+        Origin nextRescueWayPoint;
         
         int hasRoute = 0;
         int routeLength;
+        int rescueRouteLength;
         int actualWayPoint = 0;
+        int actualRescueWayPoint = 0;
         int arrived = 0;
+        int rescueArrived = 0;
         Origin enemyPos = new Origin(0,0,0);
 /*-------------------------------------------------------------------*/
 /**	Rutina central del agente para especificar su comportamiento
@@ -246,7 +249,7 @@ public final class MiBotseMueve extends ObserverBot
         public void runAI(World w)
 	{
 
-            
+            System.out.println(ID +" ->  STATE   "+ botState);
             if (mibsp==null) mibsp = new BSPParser(rutas.BSP_path);
 
             
@@ -288,9 +291,9 @@ public final class MiBotseMueve extends ObserverBot
                 helpingIndex[ID] = -1;
 
                 System.out.println("BATTLE = "+battleStrategy);
-                if(battleStrategy == FIGHT)
+                /*if(battleStrategy == FIGHT)
                 {
-                	System.out.println(ID+" I'M FIGHTING!");
+                	System.out.println(ID+"-> I'M FIGHTING!");
                     //Perseguir
                 	botState = FIGHT;
                 	botStates[ID] = FIGHT;
@@ -298,15 +301,18 @@ public final class MiBotseMueve extends ObserverBot
                     goal = false;
                 }
                 if(battleStrategy == RUNAWAY)
-                {
+                {*/
                     //Huir al aliado m�s cercano
-                	System.out.println(ID+" I'M RINNING AWAY");
-                	int helper = getClosestHelper();
+                	System.out.println(ID+"-> I'M RINNING AWAY");
+                	botState = RUNAWAY;
+                	botStates[ID] = RUNAWAY;
+                	/*int helper = getClosestHelper();
                 	if (helper != -1){
                 		//Ir a la posicion del "helper"
                     	botState = RUNAWAY;
+                    	botStates[ID] = RUNAWAY;
                     	helperRoute = this.findShortestPath(botPositions[helper]);
-                    	makeMove(player.getPosition(),helperRoute[0].getPosition().toOrigin(),null);
+                    	while (makeMove(player.getPosition(),helperRoute[0].getPosition().toOrigin(),null)==0);
                 	}
                 	else {
                 		timeNoHelp++;
@@ -319,10 +325,10 @@ public final class MiBotseMueve extends ObserverBot
                 		else {
                 			//Huir a donde???
                 		}
-                	}
+                	}*/
                 	goal = false;
                 	
-                }
+                //}
             }
             //No hay enemigo visible
             else
@@ -344,15 +350,38 @@ public final class MiBotseMueve extends ObserverBot
                 helpingIndex[ID] = -1;
                 int allyInTrouble = -1;
                 if ((allyInTrouble = checkAllyStatus()) != -1){
-                	System.out.println(ID + "ONMW TO RESCUE YOU "+allyInTrouble);
+                	System.out.println(ID + " -> ONMW TO RESCUE YOU "+allyInTrouble);
                 	helpingIndex[ID] = allyInTrouble;
-                	botState = HELPING;
-                	rescueRoute = this.findShortestPath(botPositions[allyInTrouble]);
-                	makeMove(player.getPosition(),rescueRoute[0].getPosition().toOrigin(),null);
+                	if (botState != HELPING){
+                		botState = HELPING;
+                		botStates[ID] = HELPING;                	
+                		actualRescueWayPoint = 0;
+                		rescueRoute = this.findShortestPath(botPositions[allyInTrouble]);
+                		if (rescueRoute == null) rescueRouteLength = 0;
+                		else rescueRouteLength = rescueRoute.length;
+                	}
+                	if (rescueRouteLength > 0){
+                        nextRescueWayPoint.setX((int)rescueRoute[actualRescueWayPoint].getPosition().x);
+                        nextRescueWayPoint.setY((int)rescueRoute[actualRescueWayPoint].getPosition().y);
+                        nextRescueWayPoint.setZ((int)rescueRoute[actualRescueWayPoint].getPosition().z); 
+                        rescueArrived = makeMove(player.getPosition(),nextRescueWayPoint,null);
+                	}
+                    if((rescueArrived==1)||(rescueRouteLength == 0))
+                    {
+                    	botState = LIVING;
+                    	botStates[ID] = LIVING;
+                        //System.out.println("LLEGO" + actualWayPoint + " " + routeLength);
+                        if(actualRescueWayPoint < rescueRouteLength - 1) actualRescueWayPoint++;
+                        else{
+                        	botState = LIVING;
+                        	botStates[ID] = LIVING;
+                        }
+                    }
                 }
                 else if(!goal)
                 {
                 	botState = LIVING;
+                	botStates[ID] = LIVING;
                     actualWayPoint = 0;
                     //System.out.println("OBJETIVO = " + longTermGoalPath[countGoalPath].getX() + " " + longTermGoalPath[countGoalPath].getY() + " "+ longTermGoalPath[countGoalPath].getZ());
                     route = this.findShortestPath(longTermGoalPath[countGoalPath]);
@@ -364,6 +393,7 @@ public final class MiBotseMueve extends ObserverBot
                 if(routeLength > 0)
                 {
                 	botState = LIVING;
+                	botStates[ID] = LIVING;
                     //Obtener el siguiente wayPoint
                     nextWayPoint.setX((int)route[actualWayPoint].getPosition().x);
                     nextWayPoint.setY((int)route[actualWayPoint].getPosition().y);
@@ -376,6 +406,7 @@ public final class MiBotseMueve extends ObserverBot
                 if((arrived==1)||(routeLength == 0))
                 {
                 	botState = LIVING;
+                	botStates[ID] = LIVING;
                     //System.out.println("LLEGO" + actualWayPoint + " " + routeLength);
                     if(actualWayPoint < routeLength - 1) actualWayPoint++;
                     else 
