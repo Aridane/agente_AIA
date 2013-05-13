@@ -219,7 +219,8 @@ public final class MiBotseMueve extends ObserverBot
         boolean seen = false;
         int countGoalPath = 0;
         int lengthGoalPath;
-                
+        boolean enemyDead = false;        
+        
         public void runAI(World w)
 	{
 
@@ -234,7 +235,7 @@ public final class MiBotseMueve extends ObserverBot
             Vector items = world.getItems();
             enemy = world.getOpponentByName("Player");
 
-            Vector opponents = world.getOpponents();
+            Vector opponents = world.getOpponents(true);
 
 			
                 /* if(hasRoute==0)
@@ -323,7 +324,8 @@ public final class MiBotseMueve extends ObserverBot
             nextWayPoint = new Origin(0,0,0);
 
             aim.set(targetPos.getX()-player.getPosition().getX(), targetPos.getY()-player.getPosition().getY(), targetPos.getZ()-player.getPosition().getZ());
-            if((enemy = this.visibleEnemy(player.getPosition(),mibsp, opponents, aim)) != null)
+
+            if(((enemy = this.visibleEnemy(player.getPosition(),mibsp, opponents, aim)) != null)&&((battleStrategy = decideBattle())!=0))
             {
 
                 System.out.println("VISIBLE");
@@ -331,7 +333,6 @@ public final class MiBotseMueve extends ObserverBot
                 //Despues de esto nada será igual y habrá que conseguir otro objetivo a largo plazo
                 longTermGoalPath = null;
 
-                battleStrategy = decideBattle();
                 System.out.println("BATTLE = "+battleStrategy);
                 if(battleStrategy == FIGHT)
                 {
@@ -356,6 +357,7 @@ public final class MiBotseMueve extends ObserverBot
             //No hay enemigo visible
             else
             {
+            	System.out.println("NO HAY ENEMIGO VISIBLE");
                 setAction(Action.ATTACK, false);
                 //Si ya se ha cumplido el objetivo o es el principio obtenemos uno nuevo
       /*          if(lowHealth())
@@ -514,10 +516,6 @@ public final class MiBotseMueve extends ObserverBot
             return null;
         }
         
-        private int valueOfWeapon(int weaponIndex) {
-        	if (weaponIndex == soc.qase.state.Inventory.HYPERBLASTER) return 100;
-        	else return 0;
-        }
         
     	private int [] getWeaponStats(int Index)
     	{
@@ -537,17 +535,11 @@ public final class MiBotseMueve extends ObserverBot
     		}
     		return max;
     	}
-    	int damageLowLimit = 15;
-    	int damageHighLimit = 100;
+    	int DCDALowLimit = 0;
+    	int DCDAHighLimit = 100;
     	
-    	int accuracyLowLimit = 3;
-    	int accuracyHighLimit = 7;
-    	//final int[] WEAPON_CDS = { 4, 11, 11, 0, 0, 13, 11, 8, 0, 15, 24 };
-    	int CDLowLimit = 2;
-    	int CDHighLimit = 7;
-    	
-    	int enemyDistanceLowLimit = 500;
-    	int enemyDistanceHighLimit = 1000;
+    	int AEdLowLimit = 500;
+    	int AEdHighLimit = 1000;
     	
     	int ammoLowLimit = 40;
     	int ammoHighLimit = 70;
@@ -555,71 +547,66 @@ public final class MiBotseMueve extends ObserverBot
     	//DMG -> 0 - 200
     	//CD -> 0 - 24
     	//accuracy -> 0 - 10
-    	double damageCDAccuracyHeuristic(int directDamage, int CD, int accuracy){
-    		double accuracyFactor = 10.0*accuracy;
-    		double CDFactor = (float) (100.0*(CD+0.01)/24.0);
-    		double damageFactor = 100*Math.log(directDamage)/Math.log(200.0);
-
-    		return 0.3*accuracyFactor-0.5*CDFactor+0.2*damageFactor;
+    	float damageCDAccuracyHeuristic(int directDamage, int CD, int accuracy){
+    		float accuracyFactor = (float) (100.0*accuracy);
+    		float CDFactor = (float) (100.0*(CD+0.01)/24.0);
+    		float damageFactor = (float) (100*Math.log(directDamage)/Math.log(200.0));
+    		//System.out.println("ACC "+accuracyFactor+" CDFactor "+CDFactor+" damageFactor "+damageFactor);
+    		return (float) (0.2*accuracyFactor-0.5*CDFactor+0.3*damageFactor);
     	}
     		
-    	int accuracyEnemyDistanceHeuristic(int directDamage, int CD, int accuracy){
-    		return 0;
+    	float accuracyEnemyDistanceHeuristic(int enemyDistance, int CD, int accuracy){
+    		return 1;
     	}
-    	private int getFuzzyValue(int weaponIndex,int maxAmmo, int directDamage, int accuracy, int CD, int enemyDistance){
+    	
+    	private float getHeuristicValue(int weaponIndex,int maxAmmo, int directDamage, int accuracy, int CD, int enemyDistance){
     		int res = -1;
-    		int actualAmmo;
-    		System.out.println("Arma = "+weaponIndex+"Tipo de municion "+ weaponsIndex[weaponIndex-7][0]);
+    		float actualAmmo;
+    		//System.out.println("Arma = "+weaponIndex+"Tipo de municion "+ weaponsIndex[weaponIndex-7][0]);
     		
     		Inventory inv = world.getInventory();
-    		if (weaponsIndex[weaponIndex-7][0] == -1) actualAmmo = -1;
+    		if (weaponsIndex[weaponIndex-7][0] == -1) return 1;
     		else{
-    				actualAmmo = 100*inv.getCount(weaponsIndex[weaponIndex-7][0])/maxAmmo;
+    				actualAmmo = ((float)inv.getCount(weaponsIndex[weaponIndex-7][0]))/(float)maxAmmo;
     		}
-    		System.out.println("AMMOOOOO");
-           // try {
-            	//engine = new Rete();
-                //engine.batch(rutas.Jess2_path);
-                //engine.eval("(reset)");
+            
+            float DCDA = damageCDAccuracyHeuristic(directDamage, CD, accuracy);
+            float AEd = accuracyEnemyDistanceHeuristic(enemyDistance, CD, accuracy);
+            //System.out.println("HEURISTIC VALUES: DCDA = "+DCDA+" AEd = "+AEd+" actualAmmo = "+actualAmmo+ " VALUE "+(float) ((0.85*DCDA+0.15*AEd)*actualAmmo));
+            return (float) ((0.85*DCDA+0.15*AEd)*actualAmmo);
+    		
+    		
+    		/*try {
+            	engine = new Rete();
+                engine.batch(rutas.Jess2_path);
+                engine.eval("(reset)");
+
+                float DCDA = damageCDAccuracyHeuristic(directDamage, CD, accuracy);
+                float AEd = accuracyEnemyDistanceHeuristic(directDamage, CD, accuracy);
+
+                engine.assertString("(weaponID "+weaponIndex+")");
                 
+                if (DCDA < DCDALowLimit) engine.assertString("(DCDA LOW)");
+                else if (DCDA < DCDAHighLimit) engine.assertString("(DCDA MED)");
+                else if (DCDA > DCDAHighLimit) engine.assertString("(DCDA HIGH)");
                 
-                
-                double DCDA = damageCDAccuracyHeuristic(directDamage, CD, accuracy);
-                int AEd = accuracyEnemyDistanceHeuristic(directDamage, CD, accuracy);
-                
-                return (int) DCDA;
-            //}
-                /*engine.assertString("(weaponID "+weaponIndex+")");
-                if (directDamage < damageLowLimit) engine.assertString("(damage LOW)");
-                else if (directDamage < damageHighLimit) engine.assertString("(damage MED)");
-                else if (directDamage > damageHighLimit) engine.assertString("(damage HIGH)");
-                
-                if (CD < CDLowLimit) engine.assertString("(CD LOW)");
-                else if (CD < CDHighLimit) engine.assertString("(CD MED)");
-                else if (CD > CDHighLimit) engine.assertString("(CD HIGH)");
-                
-                if (accuracy < accuracyLowLimit) engine.assertString("(accuracy LOW)");
-                else if (accuracy < accuracyHighLimit) engine.assertString("(accuracy MED)");
-                else if (accuracy > accuracyHighLimit) engine.assertString("(accuracy HIGH)");
-                
-                if (enemyDistance < enemyDistanceLowLimit) engine.assertString("(enemyDistance LOW)");
-                else if (enemyDistance < enemyDistanceHighLimit) engine.assertString("(enemyDistance MED)");
-                else if (enemyDistance > enemyDistanceHighLimit) engine.assertString("(enemyDistance HIGH)");
+                if (AEd < AEdLowLimit) engine.assertString("(AEd LOW)");
+                else if (AEd < AEdHighLimit) engine.assertString("(AEd MED)");
+                else if (AEd > AEdHighLimit) engine.assertString("(AEd HIGH)");
                 
                 if (actualAmmo < ammoLowLimit) engine.assertString("(ammo LOW)");
                 else if (actualAmmo < ammoHighLimit) engine.assertString("(ammo MED)");
                 else if (actualAmmo > ammoHighLimit) engine.assertString("(ammo HIGH)");
                 
-                // Porcentaje de munici�n actual
-                engine.assertString("(ammo "+100*(this.getInventoryItemCount(weaponsIndex[weaponIndex-7][0])/maxAmmo)+")");
                 engine.run();
 
                 res = engine.eval("?*ACTION*").intValue(null);
                 System.out.println("res = " + res);
-*/
-            //} catch (JessException je) {
-            //    System.out.println(je.toString());
-            //}
+                return res;
+
+            } catch (JessException je) {
+                System.out.println(je.toString());
+            }*/
     		
     		/*BLASTER = 7, SHOTGUN = 8, SUPER_SHOTGUN = 9,
     				MACHINEGUN = 10, CHAINGUN = 11, GRENADES = 12, GRENADE_LAUNCHER = 13,
@@ -672,31 +659,34 @@ public final class MiBotseMueve extends ObserverBot
     			if (this.hasItem(index)) vector.add(index);
     		}
     	}
+    	float actualWeaponHeuristic = 0;
         private int decideBestWeapon(Player player){
-        	System.out.println("OBTENIENDO VECTOR DE ARMAS");
+        	//System.out.println("OBTENIENDO VECTOR DE ARMAS");
         	java.util.Vector<Integer> weaponsVector = new Vector<Integer>();
         	getWeaponIndexes(weaponsVector);
-        	System.out.println("VECTOR OBTENIDO");
-        	System.out.println("TENGO "+weaponsVector.size()+" ARMAS");
+        	//System.out.println("VECTOR OBTENIDO");
+        	//System.out.println("TENGO "+weaponsVector.size()+" ARMAS");
         	int maxAmmo = 0, directDamage = 1, accuracy = 2, CD = 3, weaponIndex = 7; 
         	int [] stats = new int[4];
-        	System.out.println("PETADO?");
-        	int [] preferencias = new int[weaponsVector.size()];
         	int bestWeapon = 7;
+        	//System.out.println("PETADO?");
+        	float [] preferencias = new float[weaponsVector.size()];
         	for(int i=0;i<weaponsVector.size();i++){
-        		System.out.println("FUZZY! " + i);
-
         		weaponIndex = weaponsVector.get(i);
         		stats = getWeaponStats(weaponsVector.get(i));
-        		System.out.println("FUZZY2! " + i);
-            	preferencias[i] = getFuzzyValue(weaponIndex, stats[maxAmmo], stats[directDamage], stats[accuracy], stats[CD], 100);
-            	if ((i!=0)&&(preferencias[i]>preferencias[i-1])) bestWeapon = weaponIndex;
-            	System.out.println("TENGO "+weaponIndex+ " DCDA = "+ preferencias[i]);
+        		//Hay que obtener la distancia al enemigo para considerar.
+            	preferencias[i] = getHeuristicValue(weaponIndex, stats[maxAmmo], stats[directDamage], stats[accuracy], stats[CD], 100);
+            	if ((i!=0)&&(preferencias[i]>preferencias[i-1])){
+            		bestWeapon = weaponIndex;
+            		actualWeaponHeuristic = preferencias[i];
+            	}
+            	//System.out.println("TENGO "+weaponIndex+ " Value = "+ preferencias[i]);
         	}
         	
         	return weaponIndex;
         }
-        
+        float weaponValueLowLimit = 0;
+        float weaponValueHighLimit = 10;
         //Enemy tiene la entidad del enemigo
         private int decideBattle()
         {
@@ -713,56 +703,86 @@ public final class MiBotseMueve extends ObserverBot
             
         */
         	
-        	System.out.println("DECIDING WEAPON");
+        	//System.out.println("DECIDING WEAPON");
         	int weapon = decideBestWeapon(player);
         	this.changeWeaponByInventoryIndex(weapon);
         	System.out.println("WEAPON DECIDED");
-        	return FIGHT;
-            /*int res = -1;
+        	//Asumimos que hemos cambiado a la mejor arma que podr�amos tener.
+        	int res = -1;
             try {
             	engine = new Rete();
                 engine.batch(rutas.Jess2_path);
                 engine.eval("(reset)");
-                engine.assertString("(currentPosition 100 100 100)");
                 //Vida Actual
-                engine.assertString("(health " + player.getHealth() + ")");
-                System.out.println("VIDA = " + player.getHealth());
+                int health = player.getHealth();
+                
+                if (health < healthLowLimit){
+                	engine.assertString("(healthLevel LOW)");
+                	health = 0;
+                }
+                else if (health < healthHighLimit){
+                	engine.assertString("(healthLevel MED)");
+                	health = 1;
+                }
+                else if (health > healthHighLimit){
+                	engine.assertString("(healthLevel HIGH)");
+                	health = 2;
+                }
                 //Armadura Actual
-                engine.assertString("(armour "+player.getArmor()+")");
-                //Limites de Armadura y Vida
-                engine.assertString("(healthLowLimit " + healthLowLimit + ")");
-                engine.assertString("(armourLowLimit " + armorLowLimit + ")");
-                engine.assertString("(healthHighLimit " + healthHighLimit + ")");
+                int armor= player.getArmor();
+                if (armor < armorLowLimit){
+                	engine.assertString("(armorLevel LOW)");
+                	armor = 0;
+                }
+                else if (armor < armorHighLimit){
+                	engine.assertString("(armorLevel MED)");
+                	armor = 1;
+                }
+                else if (armor > armorHighLimit){
+                	engine.assertString("(armorLevel HIGH)");
+                	armor = 2;
+                }
 
-                engine.assertString("(armourHighLimit " + armorHighLimit + ")");
-                //Valor del arma actual
-                engine.assertString("(weapon "+valueOfWeapon(player.getWeaponIndex())+")");
                 
-                // Porcentaje de munici�n actual
-                engine.assertString("(ammo "+100*(player.getAmmo()/player.getPlayerGun().getMaxAmmo(player.getPlayerGun().getAmmoInventoryIndex()))+")");
-
                 // Valoraci�n del arma del enemigo
-                engine.assertString("(weapon "+valueOfWeapon(player.getWeaponIndex())+")");
-                
-                //�Nos ve el enemigo?
-                
-                engine.assertString("(items Health BigHealth Armor BigArmor)");
-                engine.assertString("(itemsDistance 30 40 20 50)");
-                
-                engine.assertString("(weapons MG RL RG)");
-                engine.assertString("(ammo 30 6 -1)");
-                engine.assertString("(wDistance 100 30 99)");
-                
-                
+                int enemyWeaponIndex = enemy.getWeaponInventoryIndex();
+            	int [] stats = new int[4];
+                stats = getWeaponStats(enemyWeaponIndex);
+            	int maxAmmo = 0, directDamage = 1, accuracy = 2, CD = 3; 
+                float enemyWeaponValue = getHeuristicValue(enemyWeaponIndex, stats[maxAmmo], stats[directDamage], stats[accuracy], stats[CD], 100);
+
+                //Valor del arma actual con respecto a la del enemigo
+                //ours -> Low
+                if (actualWeaponHeuristic < weaponValueLowLimit){
+                    if (enemyWeaponValue < weaponValueLowLimit) engine.assertString("(advantage 0)");
+                    else if (enemyWeaponValue < weaponValueHighLimit) engine.assertString("(advantage -1)");
+                    else if (enemyWeaponValue > weaponValueHighLimit) engine.assertString("(advantage -2)");
+                }
+                //ours -> Med
+                else if (actualWeaponHeuristic < weaponValueHighLimit){
+                    if (enemyWeaponValue < weaponValueLowLimit) engine.assertString("(advantage 1)");
+                    else if (enemyWeaponValue < weaponValueHighLimit) engine.assertString("(advantage 0)");
+                    else if (enemyWeaponValue > weaponValueHighLimit) engine.assertString("(advantage -1)");
+                }
+                //ours -> High
+                else if (actualWeaponHeuristic > weaponValueHighLimit){
+                    if (enemyWeaponValue < weaponValueLowLimit) engine.assertString("(advantage 2)");
+                    else if (enemyWeaponValue < weaponValueHighLimit) engine.assertString("(advantage 1)");
+                    else if (enemyWeaponValue > weaponValueHighLimit) engine.assertString("(advantage 0)");
+                }
+
+               // System.out.println("Health "+health+" Armor "+armor);
+
                 engine.run();
 
                 res = engine.eval("?*ACTION*").intValue(null);
                 System.out.println("BATTLE res = " + res);
 
-            } catch (JessException je) {
+            } catch (Exception je) {
                 System.out.println(je.toString());
+                return 0;
             }
-            return res;*/
+            return res;
         }
  
         
