@@ -330,29 +330,27 @@ public final class MiBotseMueve extends ObserverBot
 
                 System.out.println("VISIBLE");
                 
-                //Despues de esto nada será igual y habrá que conseguir otro objetivo a largo plazo
-                longTermGoalPath = null;
 
                 System.out.println("BATTLE = "+battleStrategy);
-                if(battleStrategy == FIGHT)
+ /*               if(battleStrategy == FIGHT)
                 {
                     //Atacar
                     Vector3f mov = new Vector3f(0,0,0);
                     aim = new Vector3f(enemy.getOrigin().getX() - player.getPosition().getX(),enemy.getOrigin().getY() - player.getPosition().getY(),enemy.getOrigin().getZ() - player.getPosition().getZ());
                     this.setBotMovement(mov, aim, 100, PlayerMove.POSTURE_NORMAL);
                     setAction(Action.ATTACK, true);
-                }
-                if(battleStrategy == CHASE)
-                {
+                }*/
+//                if(battleStrategy == CHASE)
+ //               {
                     //Perseguir
                     this.chaseEnemy();          
                     goal = false;
-                }
-                if(battleStrategy == RUNAWAY)
+  //              }
+/*                if(battleStrategy == RUNAWAY)
                 {
                     //Huir
                     
-                }
+                }*/
             }
             //No hay enemigo visible
             else
@@ -409,18 +407,105 @@ public final class MiBotseMueve extends ObserverBot
             }
 
         }
+        
+                     
+        //Establece la direccion de movimiento y devuelve si se ha llegado
+        //al objetivo o no
+        private int makeMove(Origin sourcePos,Origin targetPos,Vector3f aim)
+        {
+            //Obtener la diferencia
+            int X = targetPos.getX() - sourcePos.getX();
+            int Y = targetPos.getY() - sourcePos.getY();
+            double stepX;
+            double stepY;
+            
+            //Establecer el incremento para llegar al objetivo
+            if(X > 0) stepX = 1;
+            else if(X < 0) stepX = -1;
+            else stepX = 0.0001;
+            
+            if(Y > 0) stepY = 1;
+            else if(Y < 0) stepY = -1;
+            else stepY = 0.0001;
+            
+            Vector3f dirMov = new Vector3f(0,0,0);
+            dirMov.set((int)stepX,(int)stepY,0);
+
+            if(aim != null) setBotMovement(dirMov, aim, 1, PlayerMove.POSTURE_NORMAL);
+            else setBotMovement(dirMov, dirMov, 1, PlayerMove.POSTURE_NORMAL);
+            
+            if((X <= 50) && (X >= -50) && (Y <= 50) && (Y >= -50)) return 1;
+            else return 0;
+        }
+        
+        
+        private void getAimingVector(Vector3f aimingVector,Origin enemyPos)
+        {
+            aimingVector.set(new Vector3f(enemyPos.getX() - player.getPosition().getX(),enemyPos.getY() - player.getPosition().getY(),enemyPos.getZ() - player.getPosition().getZ()));
+        }
+        
+        
+        
+        private Entity visibleEnemy(Origin playerPos,BSPParser bsp,Vector opponents,Vector3f aim)
+        {
+            Vector3f aimEnemy = new Vector3f();
+            for(int i=0;i<opponents.size();i++)
+            {
+                enemy = (Entity)opponents.get(i);
+                aimEnemy.set(enemy.getOrigin().getX()-playerPos.getX(), enemy.getOrigin().getY()-playerPos.getY(), enemy.getOrigin().getZ()-playerPos.getZ());
+                aimEnemy.angle(aim);
+                if((aimEnemy.angle(aim) < 90) && (bsp.isVisible(playerPos.toVector3f(), enemy.getOrigin().toVector3f())))
+                {
+                    return enemy;
+                }
+            }
+            return null;
+        }
+                     
+        private boolean visibleEnemy(Origin playerPos,BSPParser bsp,Vector3f aim)
+        {
+            Vector3f aimEnemy = new Vector3f();
+            aimEnemy.set(enemy.getOrigin().getX()-playerPos.getX(), enemy.getOrigin().getY()-playerPos.getY(), enemy.getOrigin().getZ()-playerPos.getZ());
+            aimEnemy.angle(aim);
+            if((aimEnemy.angle(aim) < 90) && (bsp.isVisible(playerPos.toVector3f(), enemy.getOrigin().toVector3f())))
+            {
+                return true;
+            }
+            return false;
+        }
+        
+        
+        private int getNumberVisibleEnemies(Origin playerPos,BSPParser bsp,Vector opponents,Vector3f aim)
+        {
+            Vector3f aimEnemy = new Vector3f();
+            int n = 0;
+            for(int i=0;i<opponents.size();i++)
+            {
+                enemy = (Entity)opponents.get(i);
+                aimEnemy.set(enemy.getOrigin().getX()-playerPos.getX(), enemy.getOrigin().getY()-playerPos.getY(), enemy.getOrigin().getZ()-playerPos.getZ());
+                aimEnemy.angle(aim);
+                if((aimEnemy.angle(aim) < 90) && (bsp.isVisible(playerPos.toVector3f(), enemy.getOrigin().toVector3f())))
+                {
+                    n++;
+                }
+            }
+            return n;
+        }       
 
         private void chaseEnemy()
         {
+            System.out.println("CHASE ENEMY");
             Vector3f aim = new Vector3f();
             setAction(Action.ATTACK, true);
-            while((enemy = this.visibleEnemy(player.getPosition(),mibsp, aim)) != null)
-            {
+ //           while(this.visibleEnemy(player.getPosition(),mibsp, aim))
+ //           {
                 System.out.println("PERSIGUIENDO");
                 this.getAimingVector(aim,enemy.getOrigin());
                 this.makeMove(player.getPosition(), enemy.getOrigin(), aim);
-            } 
+ //           } 
         }
+        
+        
         
         private boolean lowHealth()
         {
@@ -431,7 +516,7 @@ public final class MiBotseMueve extends ObserverBot
         int GET_LIFE = 1;
         int GET_ARMOUR = 2;
              
-        //Decide el objetivo a largo plazo
+        //Decide el objetivo a corto plazo
         private Origin decideShortTermGoal()
         {
             int[] entitiesToGet = {Inventory.HEALTH};
@@ -661,29 +746,29 @@ public final class MiBotseMueve extends ObserverBot
     	}
     	float actualWeaponHeuristic = 0;
         private int decideBestWeapon(Player player){
-        	//System.out.println("OBTENIENDO VECTOR DE ARMAS");
-        	java.util.Vector<Integer> weaponsVector = new Vector<Integer>();
-        	getWeaponIndexes(weaponsVector);
-        	//System.out.println("VECTOR OBTENIDO");
-        	//System.out.println("TENGO "+weaponsVector.size()+" ARMAS");
-        	int maxAmmo = 0, directDamage = 1, accuracy = 2, CD = 3, weaponIndex = 7; 
-        	int [] stats = new int[4];
-        	int bestWeapon = 7;
-        	//System.out.println("PETADO?");
-        	float [] preferencias = new float[weaponsVector.size()];
-        	for(int i=0;i<weaponsVector.size();i++){
-        		weaponIndex = weaponsVector.get(i);
-        		stats = getWeaponStats(weaponsVector.get(i));
-        		//Hay que obtener la distancia al enemigo para considerar.
-            	preferencias[i] = getHeuristicValue(weaponIndex, stats[maxAmmo], stats[directDamage], stats[accuracy], stats[CD], 100);
-            	if ((i!=0)&&(preferencias[i]>preferencias[i-1])){
-            		bestWeapon = weaponIndex;
-            		actualWeaponHeuristic = preferencias[i];
-            	}
-            	//System.out.println("TENGO "+weaponIndex+ " Value = "+ preferencias[i]);
-        	}
-        	
-        	return weaponIndex;
+         //System.out.println("OBTENIENDO VECTOR DE ARMAS");
+         java.util.Vector<Integer> weaponsVector = new Vector<Integer>();
+         getWeaponIndexes(weaponsVector);
+         //System.out.println("VECTOR OBTENIDO");
+         //System.out.println("TENGO "+weaponsVector.size()+" ARMAS");
+         int maxAmmo = 0, directDamage = 1, accuracy = 2, CD = 3, weaponIndex = 7;
+         int [] stats = new int[4];
+         int bestWeapon = 7;
+         //System.out.println("PETADO?");
+         float [] preferencias = new float[weaponsVector.size()];
+         for(int i=0;i<weaponsVector.size();i++){
+         weaponIndex = weaponsVector.get(i);
+         stats = getWeaponStats(weaponsVector.get(i));
+         //Hay que obtener la distancia al enemigo para considerar.
+             preferencias[i] = getHeuristicValue(weaponIndex, stats[maxAmmo], stats[directDamage], stats[accuracy], stats[CD], 100);
+             if ((i!=0)&&(preferencias[i]>preferencias[i-1])){
+             bestWeapon = weaponIndex;
+             actualWeaponHeuristic = preferencias[i];
+             }
+             //System.out.println("TENGO "+weaponIndex+ " Value = "+ preferencias[i]);
+         }
+        
+         return weaponIndex;
         }
         float weaponValueLowLimit = 0;
         float weaponValueHighLimit = 10;
@@ -707,7 +792,7 @@ public final class MiBotseMueve extends ObserverBot
         	int weapon = decideBestWeapon(player);
         	this.changeWeaponByInventoryIndex(weapon);
         	System.out.println("WEAPON DECIDED");
-        	//Asumimos que hemos cambiado a la mejor arma que podr�amos tener.
+        	//Asumimos que hemos cambiado a la mejor arma que podr�amos tener.
         	int res = -1;
             try {
             	engine = new Rete();
@@ -1402,678 +1487,6 @@ public final class MiBotseMueve extends ObserverBot
                     specimenSet[i][j] = offsprings[i][j];
             }
         }
-        
-	/*-------------------------------------------------------------------*/
-	/**	Rutina que configura la direcciÃ³n de avance en el movimiento.    */
-	/**	BÃ¡sicamente, si detecta que el bot no avanza durante un tiempo   */
-	/**	cambia su direcciÃ³n de movimiento							     */
-	/*-------------------------------------------------------------------*/
-        
-                     double aim_x = 1.0;
-                     double aim_y = 0;
-                     double aim_z = 0.0;
-                     int vel_y = 0;
-                     int vel_x = 1;
-                     int contador = 0;
-                     int posBien = 0;
-          
-        //macros (ir de frente, de espaldas, de lado...)
-        int FRONT = 0;
-        int BACK = 1;
-        int RIGHT = 2;
-        int LEFT = 3;
-                     
-        //Establece la direccion de movimiento y devuelve si se ha llegado
-        //al objetivo o no
-        private int makeMove(Origin sourcePos,Origin targetPos,Vector3f aim)
-        {
-            //Obtener la diferencia
-            int X = targetPos.getX() - sourcePos.getX();
-            int Y = targetPos.getY() - sourcePos.getY();
-            double stepX;
-            double stepY;
-            
-            //Establecer el incremento para llegar al objetivo
-            if(X > 0) stepX = 1;
-            else if(X < 0) stepX = -1;
-            else stepX = 0.0001;
-            
-            if(Y > 0) stepY = 1;
-            else if(Y < 0) stepY = -1;
-            else stepY = 0.0001;
-            
-            Vector3f dirMov = new Vector3f(0,0,0);
-            dirMov.set((int)stepX,(int)stepY,0);
-
-            if(aim != null) setBotMovement(dirMov, aim, 1, PlayerMove.POSTURE_NORMAL);
-            else setBotMovement(dirMov, dirMov, 1, PlayerMove.POSTURE_NORMAL);
-            
-            if((X <= 50) && (X >= -50) && (Y <= 50) && (Y >= -50)) return 1;
-            else return 0;
-        }
-        
-        
-        private void getAimingVector(Vector3f aimingVector,Origin enemyPos)
-        {
-            aimingVector.set(new Vector3f(enemyPos.getX() - player.getPosition().getX(),enemyPos.getY() - player.getPosition().getY(),enemyPos.getZ() - player.getPosition().getZ()));
-        }
-        
-        private Entity visibleEnemy(Origin playerPos,BSPParser bsp,Vector opponents,Vector3f aim)
-        {
-            Vector3f aimEnemy = new Vector3f();
-            for(int i=0;i<opponents.size();i++)
-            {
-                enemy = (Entity)opponents.get(i);
-                aimEnemy.set(enemy.getOrigin().getX()-playerPos.getX(), enemy.getOrigin().getY()-playerPos.getY(), enemy.getOrigin().getZ()-playerPos.getZ());
-                aimEnemy.angle(aim);
-                if((aimEnemy.angle(aim) < 90) && (bsp.isVisible(playerPos.toVector3f(), enemy.getOrigin().toVector3f())))
-                {
-                    return enemy;
-                }
-            }
-            return null;
-        }
-                     
-        private Entity visibleEnemy(Origin playerPos,BSPParser bsp,Vector3f aim)
-        {
-            Vector3f aimEnemy = new Vector3f();
-            aimEnemy.set(enemy.getOrigin().getX()-playerPos.getX(), enemy.getOrigin().getY()-playerPos.getY(), enemy.getOrigin().getZ()-playerPos.getZ());
-            aimEnemy.angle(aim);
-            if((aimEnemy.angle(aim) < 90) && (bsp.isVisible(playerPos.toVector3f(), enemy.getOrigin().toVector3f())))
-            {
-                return enemy;
-            }
-            return null;
-        }
-        
-        
-        private int getNumberVisibleEnemies(Origin playerPos,BSPParser bsp,Vector opponents,Vector3f aim)
-        {
-            Vector3f aimEnemy = new Vector3f();
-            int n = 0;
-            for(int i=0;i<opponents.size();i++)
-            {
-                enemy = (Entity)opponents.get(i);
-                aimEnemy.set(enemy.getOrigin().getX()-playerPos.getX(), enemy.getOrigin().getY()-playerPos.getY(), enemy.getOrigin().getZ()-playerPos.getZ());
-                aimEnemy.angle(aim);
-                if((aimEnemy.angle(aim) < 90) && (bsp.isVisible(playerPos.toVector3f(), enemy.getOrigin().toVector3f())))
-                {
-                    n++;
-                }
-            }
-            return n;
-        }
-	/*-------------------------------------------------------------------*/
-	/**	Rutina que chequea las armas disponibles					     */
-	/**	Cada arma tiene un tipo de municiÃ³n. La cantidad de municiÃ³n se  */
-	/**	consulta de forma directa o a travÃ©s del arma				     */
-	/*-------------------------------------------------------------------*/
-	private void ListaArmamento()
-	{
-		String nf = "ListaArmamento";
-		
-	//	//System.out.println("---------- Entrando en " + nf);
-		try {
-			// Limpia toda la informacion anterior
-			engine.reset();
-			
-			if (world.getInventory().getCount(PlayerGun.BLASTER)>=1)
-			{
-				//System.out.println("BLASTER");			
-			}
-
-			if (world.getInventory().getCount(PlayerGun.SHOTGUN)>=1)//Necesita shells
-			{
-				//System.out.print("SHOTGUN");
-				//Consultamos la municiÃ³n a travÃ©s del arma
-				if (world.getInventory().getCount(PlayerGun.getAmmoInventoryIndexByGun(PlayerGun.SHOTGUN))>0)
-				{
-					//System.out.print(" y municiones");
-					engine.store("SHOTGUN", new Value(1, RU.INTEGER));
-				}
-				//System.out.println("");
-			}
-			else
-			{
-				engine.store("SHOTGUN", new Value(0, RU.INTEGER));				
-			}
-			
-			if (world.getInventory().getCount(PlayerGun.SUPER_SHOTGUN)>=1)//Necesita shells
-			{
-				//System.out.print("SUPER_SHOTGUN");
-				//Consultamos la municiÃ³n a travÃ©s del arma
-				if (world.getInventory().getCount(PlayerGun.getAmmoInventoryIndexByGun(PlayerGun.SUPER_SHOTGUN))>0)
-				{
-					//System.out.print(" y municiones");
-					engine.store("SUPER_SHOTGUN", new Value(1, RU.INTEGER));
-				}
-				//System.out.println("");
-			}
-			else
-			{
-				engine.store("SUPER_SHOTGUN", new Value(0, RU.INTEGER));
-			}
-			
-			//Consulta SHELLS de forma directa
-			if (world.getInventory().getCount(PlayerGun.SHELLS)>=1)//MuniciÃ³n para Shotgun y Supershotgun
-			{
-				//System.out.println("SHELLS disponibles");
-			}
-
-			if (world.getInventory().getCount(PlayerGun.CHAINGUN)>=1)//Usa BULLETS
-			{
-				//System.out.print("CHAINGUN");
-				//Consultamos la municiÃ³n a travÃ©s del arma
-				if (world.getInventory().getCount(PlayerGun.getAmmoInventoryIndexByGun(PlayerGun.CHAINGUN))>0)
-				{
-					//System.out.print(" y municiones");	
-					engine.store("CHAINGUN", new Value(1, RU.INTEGER));
-				}
-				//System.out.println("");
-			}
-			else
-			{
-				engine.store("CHAINGUN", new Value(0, RU.INTEGER));				
-			}
-			
-			if (world.getInventory().getCount(PlayerGun.MACHINEGUN)>=1)//Usa BULLETS
-			{
-				//System.out.print("MACHINEGUN");
-				//Consultamos la municiÃ³n a travÃ©s del arma
-				if (world.getInventory().getCount(PlayerGun.getAmmoInventoryIndexByGun(PlayerGun.MACHINEGUN))>0)
-				{
-					//System.out.print(" y municiones");	
-					engine.store("MACHINEGUN", new Value(1, RU.INTEGER));
-				}
-				//System.out.println("");
-			}
-			else
-			{
-				engine.store("MACHINEGUN", new Value(0, RU.INTEGER));				
-			}
-			
-			if (world.getInventory().getCount(PlayerGun.BULLETS)>=1)//MuniciÃ³n para chaingun y machinegun
-			{
-				//System.out.println("BULLETS disponibles");
-			}
-
-			if (world.getInventory().getCount(PlayerGun.GRENADE_LAUNCHER )>=1)//Usa GRENADES
-			{
-				//System.out.println("GRENADE_LAUNCHER \n");
-				//Consultamos la municiÃ³n a travÃ©s del arma
-			//	if (world.getInventory().getCount(PlayerGun.getAmmoInventoryIndexByGun(PlayerGun.GRENADE_LAUNCHER ))>0)
-					//System.out.println("y municiones\n");	
-			}	
-			
-			int cantidad = world.getInventory().getCount(PlayerGun.GRENADES);
-			if (cantidad >= 1)//MuniciÃ³n para grenade launcher
-			{
-				//System.out.println("GRENADES disponibles");
-			}
-			engine.store("GRENADES", new Value(cantidad, RU.INTEGER));				
-			
-			if (world.getInventory().getCount(PlayerGun.ROCKET_LAUNCHER )>=1)//Usa Rockets
-			{
-				//System.out.println("ROCKET_LAUNCHER");
-//				Consultamos la municiÃ³n a travÃ©s del arma
-				if (world.getInventory().getCount(PlayerGun.getAmmoInventoryIndexByGun(PlayerGun.ROCKET_LAUNCHER ))>0)
-				{
-					//System.out.println(" y municiones");
-					engine.store("ROCKET_LAUNCHER", new Value(1, RU.INTEGER));
-				}	
-			}
-			else
-			{
-				engine.store("ROCKET_LAUNCHER", new Value(0, RU.INTEGER));
-			}
-			if (world.getInventory().getCount(PlayerGun.ROCKETS )>=1)//MuniciÃ³n para ROCKET_LAUNCHER 
-			{
-				//System.out.println("ROCKETS disponibles");
-			}
-
-			if (world.getInventory().getCount(PlayerGun.HYPERBLASTER)>=1)//Usa CELLS
-			{
-				//System.out.println("HYPERBLASTER\n");
-//				Consultamos la municiÃ³n a travÃ©s del arma
-	//			if (world.getInventory().getCount(PlayerGun.getAmmoInventoryIndexByGun(PlayerGun.HYPERBLASTER))>0)
-					//System.out.println("y municiones\n");	
-			}
-			if (world.getInventory().getCount(PlayerGun.BFG10K)>=1)
-			{
-				//System.out.println("BFG10K\n");
-//				Consultamos la municiÃ³n a travÃ©s del arma
-		//		if (world.getInventory().getCount(PlayerGun.getAmmoInventoryIndexByGun(PlayerGun.BFG10K))>0)
-					//System.out.println("y municiones\n");	
-			}	
-			if (world.getInventory().getCount(PlayerGun.CELLS)>=1)//MuniciÃ³n para BFG10K e HYPERBLASTER
-			{
-				//System.out.println("CELLS disponibles");
-			}
-
-			if (world.getInventory().getCount(PlayerGun.RAILGUN)>=1)//Usa SLUGS
-			{
-				//System.out.println("RAILGUN\n");
-//				Consultamos la municiÃ³n a travÃ©s del arma
-		//		if (world.getInventory().getCount(PlayerGun.getAmmoInventoryIndexByGun(PlayerGun.RAILGUN))>0)
-					//System.out.println("y municiones\n");	
-			}
-			if (world.getInventory().getCount(PlayerGun.SLUGS)>=1)//MuniciÃ³n para RAILGUN
-			{
-				//System.out.println("SLUGS disponibles");
-			}	
-
-			//Una vez conocidas las armas disponibles y la situaciÃ³n, puede ser Ãºtil cambiar el arma activa
-			//Para cambiar de arma p.e.
-			//changeWeaponByInventoryIndex(PlayerGun.MACHINEGUN)
-		} 
-		catch (JessException je) 
-		{
-			//System.out.println(nf + "Error en la linea " + je.getLineNumber());
-			//System.out.println("Codigo:\n" + je.getProgramText());
-			//System.out.println("Mensaje:\n" + je.getMessage());
-			//System.out.println("Abortado");
-			//System.exit(1);
-		}
-		//System.out.println("---------- Saliendo de " + nf);
-	}
-	
-	
-	
-	/*-------------------------------------------------------------------*/
-	/**	Rutina que decide que arma usar. Usa Jess                        */
-	/*-------------------------------------------------------------------*/
-	private void EscogeArma()
-	{
-		String nf="=========== EscogeArma: ";
-		//System.out.println(nf + " ENTRANDO EN LA FUNCION");
-
-		try {
-
-			engine.store("DISTANCIA", new Value(distanciaEnemigo, RU.FLOAT));
-			int health = getHealth();
-			engine.store("HEALTH", new Value(health, RU.INTEGER));
-			//System.out.println("Distancia: " + distanciaEnemigo + "  Salud: " + health);
-//			engine.batch("armas_v03.clp");
-			engine.assertString("(inicio)");
-			engine.run();
-
-			Value vsalida = engine.fetch("SALIDA");
-			String salida = vsalida.stringValue(engine.getGlobalContext());
-//			String salida = vsalida.stringValue(null);
-			//System.out.println("Jess me aconseja: " + salida);
-			// Cambia el arma en funcion del consejo dado por Jess
-			if (salida.compareTo("Blaster") == 0)
-			{
-				changeWeapon(PlayerGun.BLASTER);
-			} else
-			if (salida.compareTo("Shotgun") == 0)
-			{
-				changeWeapon(PlayerGun.SHOTGUN);
-			} else
-			if (salida.compareTo("Grenades") == 0)
-			{
-				changeWeapon(PlayerGun.GRENADES);
-			} else
-			if (salida.compareTo("Rocketlauncher") == 0)
-			{
-				changeWeapon(PlayerGun.ROCKET_LAUNCHER);
-			} else
-			if (salida.compareTo("Chaingun") == 0)
-			{
-				changeWeapon(PlayerGun.CHAINGUN);
-			}
-			if (salida.compareTo("Machinegun") == 0)
-			{
-				changeWeapon(PlayerGun.MACHINEGUN);
-			}
-			if (salida.compareTo("Supershotgun") == 0)
-			{
-				changeWeapon(PlayerGun.SUPER_SHOTGUN);
-			}
-
-		} catch (JessException je) {
-			//System.out.println(nf + "Error en la linea " + je.getLineNumber());
-			//System.out.println("Codigo:\n" + je.getProgramText());
-			//System.out.println("Mensaje:\n" + je.getMessage());
-			//System.out.println("Abortado");
-			//System.exit(1);
-		}
-		
-		//System.out.println(nf + " SALIENDO DE LA FUNCION");
-	} // EscogeArma
-	
-	
-
-
-	
-	
-	
-	/*-------------------------------------------------------------------*/
-	/**	Rutina que reporta el estado del bot						     */
-	/*-------------------------------------------------------------------*/
-	private void Estado()
-	{
-		//Escribe la cantidad de actual
-//		//System.out.println("Vida "+ player.getHealth());
-		
-		
-//		//System.out.println("mi FRAGS " + player.getPlayerStatus().getStatus(PlayerStatus.FRAGS));
-		
-		//Muestra el Ã­ndice del arma activa
-		int aux=player.getWeaponIndex();
-		////System.out.println("Indice arma actual: " + world.getInventory().getItemString(aux));
-		//Si el arma activa no es Blaster, escribe su nÃºmero de municiones
-	//	if (aux!=PlayerGun.BLASTER) //System.out.println("Municion arma actual "+ player.getAmmo());
-		
-		//Parea disponer de informaciÃ³n sobre las municiones
-	//	//System.out.println("Armadura "+ player.getArmor());
-		
-	}
-	
-
-	/*-------------------------------------------------------------------*/
-	/**	Rutina que busca un arma visible, y se dirige hacia ella	     */
-	/** No controla si ya el bot dispone de dicha arma					 */
-	/*-------------------------------------------------------------------*/
-	private boolean BuscaArmaVisible()
-	{
-		//Se aplica sÃ³lo si se dispone de informaciÃ³n del bot
-		if (player!=null)
-		{
-			Entity nearestWeapon = null;
-			Vector3f pos = null;
-			Origin playerOrigin = null;
-			
-			//Inicializaciones
-			pos = new Vector3f(0, 0, 0);
-			
-			//PosiciÃ³n del jugador que se almacena en un Vector3f
-			playerOrigin = player.getPlayerMove().getOrigin();
-			pos.set(playerOrigin.getX(), playerOrigin.getY(), playerOrigin.getZ());
-			
-			//Obtiene el arma mÃ¡s cercana 
-			nearestWeapon = this.getNearestWeapon(null);
-			//this.getNearestEnemy();//Obtiene el enemigo mÃ¡s cercano
-			
-			//Si no es nula
-			if (nearestWeapon!=null)
-			{
-				Vector3f weap = new Vector3f(nearestWeapon.getOrigin());
-				Vector3f DirMov;
-				
-				DirMov = new Vector3f(0, 0, 0);
-				
-				//Chequea la visibilidad del arma, sÃ³lo posible si disponemos de informaciÃ³n del Ã¡rbol BSP
-				if (mibsp!=null)
-				{
-					//Si 
-					if (mibsp.isVisible(weap, pos))
-					{
-						//System.out.println("Veo arma\n");
-						
-						//Establece el vetor uniendo el bot y el arma, para indicar la direcciÃ³n que debe
-						//seguir el bot en su movimiento
-						DirMov.set(weap.x-pos.x, weap.y-pos.y, weap.z-pos.z);
-			
-						//Normaliza la direcciÃ³n a seguir
-						DirMov.normalize();
-						
-						//Comanda el movimiento
-						setBotMovement(DirMov, null, 200, PlayerMove.POSTURE_NORMAL);
-						
-						//Retorna true para indicar que ha establecido el movimiento
-						return true;
-					}						
-				}
-			}
-		}
-		
-		//En cualquier otro caso retorna false
-		return false;
-	}
-	
-	
-	/*-------------------------------------------------------------------*/
-	/**	Rutina que busca una entidad visible						     */
-	/*-------------------------------------------------------------------*/
-	private boolean BuscaEntidad()
-	{
-			
-		//Hay informaciÃ³n del jugador disponible
-		if (player!=null)
-		{
-			//Hay informaciÃ³n del entorno disponible
-			if (mibsp!=null)
-			{
-//				Variables
-				Entity nearestEntity = null;
-				Entity tempEntity = null;
-				Vector entities = null;
-				Origin playerOrigin = null;
-				Origin entityOrigin = null;
-				Vector3f entPos; 
-				Vector3f entDir;
-				Vector3f pos = null;
-				float entDist = Float.MAX_VALUE;
-				
-				//PosiciÃ³n del bot
-				pos = new Vector3f(0, 0, 0);
-				entDir = new Vector3f(0, 0, 0);
-				entPos = new Vector3f(0, 0, 0);
-				
-				//PosiciÃ³n del jugador que se almacena en un Vector3f
-				playerOrigin = player.getPlayerMove().getOrigin();
-				pos.set(playerOrigin.getX(), playerOrigin.getY(), playerOrigin.getZ());
-				
-//				Obtiene informaciÃ³n de las entidades
-				entities = world.getItems();
-				//world.getOpponents();//Obtiene listado de enemigos
-		
-				//Muestra el nÃºmero de entidades disponibles
-				////System.out.println("Entidades "+ entities.size());
-				
-				//Determina la entidad mÃ¡s interesante siguiendo un criterio de distancia en 2D y visibilidad
-				for(int i = 0; i < entities.size(); i++)//Para cada entidad
-				{
-					//Obtiene informaciÃ³n de la entidad actual
-					tempEntity = (Entity) entities.elementAt(i);
-					
-					//Muestra la categorÃ­a ("items", "weapons", "objects", o "player")
-				//
-                                        
-                                        //System.out.println("Entidad de tipo "+ tempEntity.getCategory() + ", tipo " + tempEntity.getType() + ", subtipo " + tempEntity.getSubType());
-					
-					//Obtiene la posiciÃ³n de la entidad que estÃ¡ siendo analizada
-					entityOrigin = tempEntity.getOrigin();
-					
-					//Inicializa un Vector considerando sÃ³lo la x e y, es decir despreciando z
-					entPos.set(entityOrigin.getX(), entityOrigin.getY(), 0);
-					
-					//Vector que une las posiciones de la entidad y el jugador proyectado en 2D
-					entDir.sub(entPos, pos);
-					
-					//Uso BSPPARSER para saber si la entidad y el observador se "ven", es decir no hay obstÃ¡culos entre ellos
-					Vector3f a = new Vector3f(playerOrigin);
-					Vector3f b = new Vector3f(entityOrigin);
-					
-					//Si la entidad es visible (usando la informaicÃ³n del bsp) y su distancia menor a la mÃ­nima almacenada (o no habÃ­a nada almacenado), la almacena
-					if((nearestEntity == null || entDir.length() < entDist) && entDir.length() > 0 && mibsp.isVisible(a,b))
-					{
-						nearestEntity = tempEntity;
-						entDist = entDir.length();
-					}
-				}//for
-				
-								//Para la entidad seleccionada, calcula la direcciÃ³n de movimiento
-				if(nearestEntity != null)
-				{
-					//PosiciÃ³n de la entidad
-					entityOrigin = nearestEntity.getOrigin();
-					entPos.set(entityOrigin.getX(), entityOrigin.getY(), 0);
-		
-					//DireciÃ³n de movimiento en base a la entidad elegida y la posiciÃ³n del jugador
-					entDir.sub(entPos, pos);
-					entDir.normalize();
-					
-					//Comanda el movimiento hacia la entidad selecionada
-					//setBotMovement(entDir, null, 200, PlayerMove.POSTURE_NORMAL);
-					//return true;
-				}				
-			}					
-		}
-		
-		return false;
-
-	}
-	
-	
-	/*-------------------------------------------------------------------*/
-	/**	Rutina que busca un enemigo visible							     */
-	/*-------------------------------------------------------------------*/
-	private boolean BuscaEnemigoVisible()
-	{
-		setAction(Action.ATTACK, false);
-			
-		//Hay informaciÃ³n del jugador disponible
-		if (player!=null)
-		{
-			//Hay informaciÃ³n del entorno disponible
-			if (mibsp!=null)
-			{
-//				Variables
-				Entity nearestEnemy = null;
-				Entity tempEnemy = null;
-				Vector enemies = null;
-				Origin playerOrigin = null;
-				Origin enemyOrigin = null;
-				Vector3f enPos; 
-				Vector3f enDir;
-				Vector3f pos = null;
-				boolean NearestVisible=false;
-				float enDist = Float.MAX_VALUE;
-				
-				//PosiciÃ³n del bot
-				pos = new Vector3f(0, 0, 0);
-				enDir = new Vector3f(0, 0, 0);
-				enPos = new Vector3f(0, 0, 0);
-				
-				//PosiciÃ³n del jugador que se almacena en un Vector3f
-				playerOrigin = player.getPlayerMove().getOrigin();
-				pos.set(playerOrigin.getX(), playerOrigin.getY(), playerOrigin.getZ());
-				
-				
-				//Si sÃ³lo queremos acceder al enemigo mÃ¡s cercano
-				Entity enemy=null;
-// Tengo que descomentar esto -->  enemy=this.getNearestEnemy();//Obtiene el enemigo mÃ¡s cercano
-				if (enemy!=null)
-					//System.out.println("Hay enemigo cercano ");
-					
-//				Obtiene informaciÃ³n de todos los enemigos
-				enemies = world.getOpponents();
-			
-				//Muestra el nÃºmero de enemigos disponibles
-				//System.out.println("Enemigos "+ enemies.size());
-				
-				//Determina el enemigo mÃ¡s interesante siguiendo un criterio de distancia en 2D y visibilidad
-				for(int i = 0; i < enemies.size(); i++)//Para cada entidad
-				{
-					//Obtiene informaciÃ³n de la entidad actual
-					tempEnemy = (Entity) enemies.elementAt(i);
-					
-					//Obtiene la posiciÃ³n de la entidad que estÃ¡ siendo analizada
-					enemyOrigin = tempEnemy.getOrigin();
-					
-					//Inicializa un Vector considerando sÃ³lo la x e y, es decir despreciando z
-					enPos.set(enemyOrigin.getX(), enemyOrigin.getY(),enemyOrigin.getZ());
-					
-					//Vector que une las posiciones de la entidad y el jugador proyectado en 2D
-					enDir.sub(enPos, pos);
-					
-					//Uso BSPPARSER para saber si la entidad y el observador se "ven", es decir no hay obstÃ¡culos entre ellos
-					Vector3f a = new Vector3f(playerOrigin);
-					Vector3f b = new Vector3f(enemyOrigin);
-					
-					//Si la entidad es visible (usando la informaicÃ³n del bsp) y su distancia menor a la mÃ­nima almacenada (o no habÃ­a nada almacenado), la almacena
-					if((nearestEnemy == null || enDir.length() < enDist) && enDir.length() > 0 )
-					{
-						nearestEnemy = tempEnemy;
-						enDist = enDir.length();
-						
-						//Es visible el mÃ¡s cercano
-						if (mibsp.isVisible(a,b))
-						{
-							NearestVisible=true;							
-						}
-						else
-						{
-							NearestVisible=false;
-						}
-						
-					}
-				}//for
-				
-				//Para la entidad seleccionada, calcula la direcciÃ³n de movimiento
-				if(nearestEnemy != null)
-				{
-					//PosiciÃ³n de la entidad
-					enemyOrigin = nearestEnemy.getOrigin();
-					enPos.set(enemyOrigin.getX(), enemyOrigin.getY(), enemyOrigin.getZ());
-		
-					//DireciÃ³n de movimiento en base a la entidad elegida y la posiciÃ³n del jugador
-					enDir.sub(enPos, pos);
-					//enDir.normalize();
-					
-					if (NearestVisible)//Si es visible ataca
-					{
-						//System.out.println("Ataca enemigo ");
-						this.sendConsoleCommand("Modo ataque");
-						
-//						Ã�ngulo del arma
-						Angles arg0=new Angles(enDir.x,enDir.y,enDir.z);
-						player.setGunAngles(arg0);
-						
-//						Para el movimiento y establece el modo de ataque
-						
-						setAction(Action.ATTACK, true);		
-						
-						setBotMovement(enDir, null, 0, PlayerMove.POSTURE_NORMAL);
-						// Distancia al enemigo (para el motor de inferencia)
-						distanciaEnemigo = enDist;
-						return true;
-					}
-					else//en otro caso intenta ir hacia el enemigo
-					{
-						//System.out.println("Hay enemigo, pero no estÃ¡ visible ");
-						distanciaEnemigo = Float.MAX_VALUE;
-					}
-					
-					
-				}				
-			}					
-		}
-		
-		return false;
-
-	}
-	
-	
-	/*-------------------------------------------------------------------*/
-	/**	Rutina que indica la distancia a un obstÃ¡culo en una direcciÃ³n   */
-	/*-------------------------------------------------------------------*/
-	private void DistObs()
-	{			
-		//Crea un vestor en la direcciÃ³n de movimiento del bot
-		Vector3f movDir = new Vector3f(player.getPlayerMove().getDirectionalVelocity().x, 
-						player.getPlayerMove().getDirectionalVelocity().y,0.f);
-		
-		//Obtiene la distancia mÃ­nima a un obstÃ¡culo en esa direcciÃ³n
-		float distmin = this.getObstacleDistance(movDir,2500.f);			
-		
-		//La muestra
-		if (distmin!=Float.NaN)
-		{
-//			//System.out.println("Distancia mmínima obstáculo " + distmin);
-		}			
-	}
-	
 }
+
+	
